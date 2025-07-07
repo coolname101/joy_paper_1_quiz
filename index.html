@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joy's IGCSE Computer Science Paper 1 Quiz</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter for a clean look -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- jsPDF CDN for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Light gray background */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align to top to prevent overflow issues on smaller screens */
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .quiz-container {
+            background-color: #ffffff;
+            border-radius: 1.5rem; /* More rounded corners */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* Softer shadow */
+            padding: 2.5rem; /* Increased padding */
+            max-width: 900px; /* Wider container */
+            width: 100%;
+            margin-top: 20px; /* Space from top */
+            margin-bottom: 20px; /* Space from bottom */
+        }
+        .question-text {
+            font-size: 1.25rem; /* Larger font for questions */
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 1.5rem;
+            line-height: 1.6; /* Improved readability */
+        }
+        .answer-option {
+            background-color: #e0e7ff; /* Light blue for options */
+            color: #4338ca; /* Darker blue text */
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            border: 2px solid transparent; /* Default transparent border */
+        }
+        .answer-option:hover {
+            background-color: #c7d2fe; /* Lighter blue on hover */
+            transform: translateY(-2px); /* Slight lift effect */
+        }
+        .answer-option.selected {
+            background-color: #6366f1; /* Deeper blue for selected */
+            color: #ffffff;
+            border-color: #4f46e5; /* Matching border */
+        }
+        .answer-option.correct {
+            background-color: #d1fae5; /* Light green for correct */
+            color: #065f46; /* Dark green text */
+            border-color: #10b981; /* Green border */
+        }
+        .answer-option.incorrect {
+            background-color: #fee2e2; /* Light red for incorrect */
+            color: #991b1b; /* Dark red text */
+            border-color: #ef4444; /* Red border */
+        }
+        .rationale-text {
+            font-size: 0.9rem;
+            color: #555;
+            margin-top: 0.5rem;
+            padding-left: 0.75rem; /* Indent rationale */
+            border-left: 3px solid #ccc; /* Visual separation */
+        }
+        .hint-text {
+            font-style: italic;
+            color: #6b7280;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+        .navigation-button {
+            background-color: #4f46e5; /* Indigo */
+            color: white;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+        .navigation-button:hover {
+            background-color: #4338ca; /* Darker indigo */
+            transform: translateY(-1px);
+        }
+        .navigation-button:disabled {
+            background-color: #a5b4fc; /* Lighter indigo when disabled */
+            cursor: not-allowed;
+        }
+        .progress-bar-container {
+            background-color: #e5e7eb;
+            border-radius: 9999px; /* Fully rounded */
+            height: 10px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+        .progress-bar {
+            background-color: #4f46e5; /* Indigo */
+            height: 100%;
+            width: 0%;
+            border-radius: 9999px;
+            transition: width 0.3s ease-in-out;
+        }
+        /* Styling for the download button */
+        .download-button {
+            background-color: #10b981; /* Green */
+            color: white;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+        .download-button:hover {
+            background-color: #059669; /* Darker green */
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center p-4">
+    <div id="quiz-app" class="quiz-container">
+        <!-- Quiz Section -->
+        <div id="quiz-section" class="flex flex-col">
+            <div class="progress-bar-container">
+                <div id="progress-bar" class="progress-bar"></div>
+            </div>
+            <p class="text-sm text-gray-500 mb-4">Question <span id="current-q-num">1</span> of <span id="total-q-num">75</span></p>
+            <div id="question-display" class="mb-6">
+                <p id="question-text" class="question-text"></p>
+                <p id="hint-text" class="hint-text hidden"></p>
+            </div>
+
+            <div id="answer-options" class="grid grid-cols-1 gap-4 mb-6">
+                <!-- Answer options will be dynamically inserted here -->
+            </div>
+
+            <div class="flex justify-between">
+                <button id="prev-button" class="navigation-button px-6 py-3 rounded-xl font-semibold shadow-md" disabled>Previous</button>
+                <button id="next-button" class="navigation-button px-6 py-3 rounded-xl font-semibold shadow-md">Next</button>
+                <button id="submit-button" class="navigation-button px-6 py-3 rounded-xl font-semibold shadow-md hidden">Submit Quiz</button>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results-section" class="hidden flex flex-col">
+            <h2 class="text-3xl font-bold text-center text-indigo-700 mb-6">Quiz Results for Joy Rahman</h2>
+            <p class="text-xl text-center text-gray-700 mb-8">You scored <span id="score-display" class="font-bold text-indigo-600"></span> out of <span id="total-questions-display" class="font-bold text-indigo-600"></span> (<span id="percentage-display" class="font-bold text-indigo-600"></span>%)</p>
+
+            <div id="review-questions" class="space-y-8">
+                <!-- Reviewed questions and answers will be inserted here -->
+            </div>
+
+            <div class="flex justify-center gap-4 mt-8">
+                <button id="download-pdf-button" class="download-button px-6 py-3 rounded-xl font-semibold shadow-md">Download PDF</button>
+                <button id="restart-button" class="navigation-button px-6 py-3 rounded-xl font-semibold shadow-md">Restart Quiz</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Array of all 75 questions for Paper 1
+        const questions = [
+            {
+                "question": "A user has multiple large applications open, and their computer's RAM is full. To prevent a crash, the operating system starts using a portion of the hard disk drive as temporary memory. What is this technique called?",
+                "hint": "Think about how an operating system can 'extend' its available memory when the physical chips are full.",
+                "answerOptions": [
+                    { "text": "Cloud Storage", "rationale": "Cloud storage involves saving data on remote servers over the internet, not using a local disk as temporary RAM.", "isCorrect": false },
+                    { "text": "Virtual Memory", "rationale": "This process involves using secondary storage to simulate additional primary storage (RAM) when the physical RAM is fully utilized.", "isCorrect": true },
+                    { "text": "Cache Memory", "rationale": "Cache is a small, very fast type of memory located on the CPU, used to store frequently accessed data from RAM, not data from the hard drive.", "isCorrect": false },
+                    { "text": "Read-Only Memory (ROM)", "rationale": "ROM is non-volatile memory used to store boot-up instructions and cannot be used by the OS as temporary active memory.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "An image has a resolution of 1000 x 500 pixels and a colour depth of 8 bits. What is its file size in kibibytes (KiB), assuming no compression?",
+                "hint": "First, find the total number of bits. Then, remember the conversions: 8 bits in a byte, and 1024 bytes in a kibibyte.",
+                "answerOptions": [
+                    { "text": "500 KiB", "rationale": "This result might occur if you incorrectly divide by 1000 instead of 1024 for the final conversion to KiB.", "isCorrect": false },
+                    { "text": "4000 KiB", "rationale": "This result incorrectly multiplies the total bits by 8 instead of dividing, when converting from bits to bytes.", "isCorrect": false },
+                    { "text": "488.28 KiB", "rationale": "The calculation involves multiplying pixels by bit depth (1000 * 500 * 8), then dividing by 8 to get bytes, and finally dividing by 1024 to get KiB.", "isCorrect": true },
+                    { "text": "62.5 KiB", "rationale": "This answer incorrectly divides the number of pixels by the conversion factors instead of the total number of bits.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "During a file transfer, a data packet is corrupted by interference. Which error checking protocol actively ensures the sender re-transmits the corrupted packet?",
+                "hint": "Consider which method involves communication back to the sender to confirm if the data was received correctly.",
+                "answerOptions": [
+                    { "text": "Parity Check", "rationale": "A parity check can detect that an error has occurred, but it does not have a mechanism to request a re-transmission of the data.", "isCorrect": false },
+                    { "text": "Checksum", "rationale": "A checksum can identify if the data has been corrupted, but the protocol itself does not handle the re-transmission request.", "isCorrect": false },
+                    { "text": "Automatic Repeat Query (ARQ)", "rationale": "ARQ uses a system of acknowledgements and timeouts to confirm receipt of data, automatically requesting a re-transmission if data is corrupt or lost.", "isCorrect": true },
+                    { "text": "Echo Check", "rationale": "An echo check involves the receiver sending the data back to the sender for comparison, but the request to re-send is not an automatic part of the protocol itself.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "A developer is creating a program and wants to test it frequently, line-by-line, to find errors quickly. Which type of translator is most suitable during this development phase?",
+                "hint": "Which translator processes code one statement at a time, making it ideal for immediate feedback and debugging?",
+                "answerOptions": [
+                    { "text": "Compiler", "rationale": "A compiler translates the entire program at once, which is efficient for distribution but slower for the iterative process of debugging line-by-line.", "isCorrect": false },
+                    { "text": "Assembler", "rationale": "An assembler is specifically used for translating low-level assembly language, not typically for general high-level application development.", "isCorrect": false },
+                    { "text": "Interpreter", "rationale": "An interpreter translates and executes code one line at a time, which allows for rapid testing and identification of errors during development.", "isCorrect": true },
+                    { "text": "Decompiler", "rationale": "A decompiler attempts to reverse the compilation process, turning machine code back into source code, which is not used for program development.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "You want to connect your home's local network, which has several devices, to the external internet. Which piece of network hardware is primarily responsible for forwarding data packets between these two different networks?",
+                "hint": "Think about the device that acts as a gateway or traffic director between your private network and the public internet.",
+                "answerOptions": [
+                    { "text": "Network Interface Card (NIC)", "rationale": "A NIC allows a single device to connect to a network, but it does not manage traffic between different networks.", "isCorrect": false },
+                    { "text": "Router", "rationale": "A router's main function is to direct traffic and forward data packets between different networks, such as a local home network and the internet.", "isCorrect": true },
+                    { "text": "USB Hub", "rationale": "A USB hub is used to expand the number of USB ports available on a computer; it does not handle network traffic.", "isCorrect": false },
+                    { "text": "Switch", "rationale": "A switch connects multiple devices together on the *same* local network, but it does not typically connect the local network to an external one like the internet.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "What is the correct 8-bit two's complement representation for the denary number -25?",
+                "hint": "Start by finding the positive binary representation, then invert all the bits, and finally, add one.",
+                "answerOptions": [
+                    { "text": "11100111", "rationale": "This is the correct representation, achieved by taking +25 (00011001), inverting the bits (11100110), and adding 1.", "isCorrect": true },
+                    { "text": "00011001", "rationale": "This is the binary representation for the positive denary number 25, not the negative two's complement form.", "isCorrect": false },
+                    { "text": "10011001", "rationale": "This representation simply places a '1' in the most significant bit for the sign, which is sign and magnitude notation, not two's complement.", "isCorrect": false },
+                    { "text": "11100110", "rationale": "This is the result of inverting the bits of positive 25, but it misses the final step of adding one.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Which of the following describes the correct sequence of the Fetch-Decode-Execute cycle?",
+                "hint": "The name of the cycle itself gives a strong clue to the order of operations.",
+                "answerOptions": [
+                    { "text": "Execute instruction, Fetch next instruction from memory, Decode the instruction.", "rationale": "Executing an instruction before it has been fetched and decoded is not a logical sequence for processing.", "isCorrect": false },
+                    { "text": "Decode instruction, Fetch instruction from memory, Execute the instruction.", "rationale": "An instruction cannot be decoded before it has been fetched from memory into a CPU register.", "isCorrect": false },
+                    { "text": "Fetch instruction from memory, Decode the instruction, Execute the instruction.", "rationale": "The CPU must first retrieve the instruction, then understand what it means, and finally carry it out.", "isCorrect": true },
+                    { "text": "Fetch instruction from memory, Execute the instruction, Decode the instruction.", "rationale": "Executing an instruction before the CPU has decoded it to understand what to do is not possible.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "A peripheral needs to send data over a long cable (10 meters) to a computer. To minimize the risk of bits arriving out of sync (data skew), which transmission method is most suitable?",
+                "hint": "Consider which method sends data bit-by-bit down a single line, avoiding timing issues over distance.",
+                "answerOptions": [
+                    { "text": "Parallel Transmission", "rationale": "Parallel transmission is prone to data skew over long distances as bits sent on different wires may arrive at slightly different times.", "isCorrect": false },
+                    { "text": "Simplex Transmission", "rationale": "Simplex describes the direction of data flow (one way only), not the method of sending bits (serially or in parallel).", "isCorrect": false },
+                    { "text": "Serial Transmission", "rationale": "Serial transmission sends one bit at a time over a single channel, which is reliable over long distances and avoids data skew.", "isCorrect": true },
+                    { "text": "Full-Duplex Transmission", "rationale": "Full-duplex describes the directionality of data flow (two ways at once), not the method used to avoid data skew over distance.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "A user is actively working on a large video editing project. Where is the portion of the video file currently being edited and the editing software itself most likely being held for immediate access by the CPU?",
+                "hint": "The CPU needs extremely fast access to data it is working on right now. Which type of memory provides this?",
+                "answerOptions": [
+                    { "text": "Hard Disk Drive (HDD)", "rationale": "An HDD is secondary storage; while it holds the entire saved file, it is too slow for the direct, continuous access required by the CPU for active tasks.", "isCorrect": false },
+                    { "text": "Random Access Memory (RAM)", "rationale": "RAM is fast, volatile primary storage used to hold the operating system, applications, and data currently in use for quick processing by the CPU.", "isCorrect": true },
+                    { "text": "Solid-State Drive (SSD)", "rationale": "An SSD is a faster type of secondary storage than an HDD, but data must still be loaded from it into RAM for the CPU to process it actively.", "isCorrect": false },
+                    { "text": "Read-Only Memory (ROM)", "rationale": "ROM is non-volatile memory that contains boot-up instructions and cannot be used to store user files or applications for active use.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Convert the denary number 150 into an 8-bit binary number.",
+                "hint": "Identify the place values (128, 64, 32, 16, 8, 4, 2, 1) that add up to the target number.",
+                "answerOptions": [
+                    { "text": "10010110", "rationale": "This binary number correctly represents 128 + 16 + 4 + 2, which equals 150.", "isCorrect": true },
+                    { "text": "10010101", "rationale": "This binary value adds up to 149 (128 + 16 + 4 + 1), which is one less than the correct value.", "isCorrect": false },
+                    { "text": "10101010", "rationale": "This binary value represents the denary number 170 (128 + 32 + 8 + 2).", "isCorrect": false },
+                    { "text": "01100101", "rationale": "This binary value represents the denary number 101 (64 + 32 + 4 + 1).", "isCorrect": false }
+                ]
+            },
+            // Remaining 65 questions from the previous list
+            {
+                "question": "Explain why computers use binary to represent all forms of data.",
+                "hint": "Consider the fundamental electrical states that digital circuits can recognize.",
+                "answerOptions": [
+                    { "text": "Binary numbers are easier for humans to read.", "rationale": "Binary is generally harder for humans to read than denary or hexadecimal.", "isCorrect": false },
+                    { "text": "It allows for faster processing of complex mathematical equations.", "rationale": "While efficient, the primary reason is not solely for complex math but for fundamental operation.", "isCorrect": false },
+                    { "text": "Computers' electronic circuits operate on two states (on/off), easily represented by 0s and 1s.", "rationale": "This directly relates to the physical nature of computer hardware and its ability to represent information using electrical signals.", "isCorrect": true },
+                    { "text": "Binary uses less memory than other number systems.", "rationale": "The amount of memory used is determined by the number of bits, not the base of the number system itself.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Convert the denary number 42 into an 8-bit binary number.",
+                "hint": "Break down 42 into powers of 2 (128, 64, 32, 16, 8, 4, 2, 1).",
+                "answerOptions": [
+                    { "text": "00101010", "rationale": "42 in binary is 32 + 8 + 2.", "isCorrect": true },
+                    { "text": "00101100", "rationale": "This binary represents 44.", "isCorrect": false },
+                    { "text": "01010100", "rationale": "This binary represents 84.", "isCorrect": false },
+                    { "text": "00110010", "rationale": "This binary represents 50.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Convert the binary number 11010110 into its denary equivalent.",
+                "hint": "Assign each bit its corresponding power of 2 value and sum them up.",
+                "answerOptions": [
+                    { "text": "214", "rationale": "128 + 64 + 0 + 16 + 0 + 4 + 2 + 0 = 214.", "isCorrect": true },
+                    { "text": "206", "rationale": "This would be if the third bit from the right was 0 instead of 1.", "isCorrect": false },
+                    { "text": "198", "rationale": "This would be if the fourth bit from the right was 0 instead of 1.", "isCorrect": false },
+                    { "text": "222", "rationale": "This would be if the last bit was 1 instead of 0.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Convert the denary number 255 into hexadecimal.",
+                "hint": "Remember that 255 is the maximum value for an 8-bit binary number (all 1s).",
+                "answerOptions": [
+                    { "text": "FF", "rationale": "In hexadecimal, F represents 15. So, FF is 15*16 + 15 = 240 + 15 = 255.", "isCorrect": true },
+                    { "text": "FE", "rationale": "FE is 254.", "isCorrect": false },
+                    { "text": "EF", "rationale": "EF is 239.", "isCorrect": false },
+                    { "text": "E0", "rationale": "E0 is 224.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Convert the hexadecimal number 3A into its denary equivalent.",
+                "hint": "Recall the denary value for 'A' in hexadecimal and multiply by the appropriate powers of 16.",
+                "answerOptions": [
+                    { "text": "30", "rationale": "This would be if A was treated as 0 and not 10.", "isCorrect": false },
+                    { "text": "3A", "rationale": "This is the hexadecimal value itself, not its denary equivalent.", "isCorrect": false },
+                    { "text": "48", "rationale": "This would be if A was treated as 8.", "isCorrect": false },
+                    { "text": "58", "rationale": "3 * 16 + 10 = 48 + 10 = 58.", "isCorrect": true }
+                ]
+            },
+            {
+                "question": "Convert the hexadecimal number C7 into an 8-bit binary number.",
+                "hint": "Convert each hexadecimal digit into its 4-bit binary equivalent.",
+                "answerOptions": [
+                    { "text": "11000111", "rationale": "C is 1100 in binary, and 7 is 0111 in binary.", "isCorrect": true },
+                    { "text": "10100111", "rationale": "This would be A7.", "isCorrect": false },
+                    { "text": "11100111", "rationale": "This would be E7.", "isCorrect": false },
+                    { "text": "11001110", "rationale": "This would be C E.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Explain one benefit of using hexadecimal as a method of data representation compared to binary for humans.",
+                "hint": "Consider the length and complexity of binary strings versus hexadecimal strings.",
+                "answerOptions": [
+                    { "text": "Hexadecimal numbers are processed faster by the CPU.", "rationale": "The CPU processes binary directly, not hexadecimal.", "isCorrect": false },
+                    { "text": "It allows for more precise calculations in programming.", "rationale": "Precision is related to floating-point representation, not the number system base for human readability.", "isCorrect": false },
+                    { "text": "Hexadecimal is a shorter representation of binary, making it easier for humans to read, write, and remember.", "rationale": "Each hexadecimal digit represents 4 binary bits, condensing long binary strings into a more manageable format.", "isCorrect": true },
+                    { "text": "It is the native language of all modern computer processors.", "rationale": "Machine code (binary) is the native language, not hexadecimal.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Add the following two 8-bit binary integers: 01011001 + 00110101. Show your working.",
+                "hint": "Perform binary addition column by column, remembering to carry over when the sum is 2 or more.",
+                "answerOptions": [
+                    { "text": "10001110", "rationale": "01011001 (89) + 00110101 (53) = 10001110 (142).", "isCorrect": true },
+                    { "text": "10010000", "rationale": "This result is incorrect, likely due to an error in carrying or addition.", "isCorrect": false },
+                    { "text": "01110110", "rationale": "This result is incorrect, likely due to an error in carrying or addition.", "isCorrect": false },
+                    { "text": "11001010", "rationale": "This result is incorrect, likely due to an error in carrying or addition.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Explain the concept of overflow in binary addition.",
+                "hint": "Consider what happens when the result of an addition exceeds the capacity of the allocated storage space.",
+                "answerOptions": [
+                    { "text": "It's when a binary number becomes too large to be displayed on the screen.", "rationale": "Overflow is a computational error, not a display issue.", "isCorrect": false },
+                    { "text": "It occurs when the result of a binary addition exceeds the maximum value that can be stored in the allocated number of bits.", "rationale": "This accurately defines overflow, where the sum requires more bits than available in the register, leading to an incorrect result.", "isCorrect": true },
+                    { "text": "It's an error caused by adding a negative binary number to a positive one.", "rationale": "Adding positive and negative numbers can be done correctly in two's complement without necessarily causing overflow.", "isCorrect": false },
+                    { "text": "It indicates that the sum of two binary numbers is zero.", "rationale": "A sum of zero is a valid result, not an overflow.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Perform a logical left shift of 2 bits on the 8-bit binary integer 00110100. State the new binary number and its denary value.",
+                "hint": "When performing a logical left shift, bits shifted out from the left are lost, and zeros are shifted in from the right.",
+                "answerOptions": [
+                    { "text": "New binary: 00001101, Denary: 13", "rationale": "This is a right shift, not a left shift.", "isCorrect": false },
+                    { "text": "New binary: 11010000, Denary: 208", "rationale": "Shifting 00110100 left by 2 bits results in 11010000. This is equivalent to multiplying by $2^2 = 4$ (52 * 4 = 208).", "isCorrect": true },
+                    { "text": "New binary: 01101000, Denary: 104", "rationale": "This is a left shift of 1 bit, not 2 bits.", "isCorrect": false },
+                    { "text": "New binary: 00110100, Denary: 52", "rationale": "This indicates no shift occurred.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Represent the denary number -5 using 8-bit two's complement.",
+                "hint": "First, find the binary for positive 5, then invert all bits, and finally add 1 to the result.",
+                "answerOptions": [
+                    { "text": "11111011", "rationale": "Positive 5 is 00000101. Inverting gives 11111010. Adding 1 gives 11111011.", "isCorrect": true },
+                    { "text": "00000101", "rationale": "This is positive 5.", "isCorrect": false },
+                    { "text": "10000101", "rationale": "This is -5 in sign-magnitude, not two's complement.", "isCorrect": false },
+                    { "text": "11111010", "rationale": "This is the inverted form, before adding 1.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "What denary number is represented by the 8-bit two's complement binary number 11110010?",
+                "hint": "If the most significant bit is 1, the number is negative. To find its magnitude, invert all bits and add 1.",
+                "answerOptions": [
+                    { "text": "-14", "rationale": "Invert 11110010 to get 00001101. Add 1 to get 00001110 (which is 14). Since the original MSB was 1, the number is -14.", "isCorrect": true },
+                    { "text": "14", "rationale": "This is the positive equivalent, not the value of the two's complement negative number.", "isCorrect": false },
+                    { "text": "-242", "rationale": "This would be if you calculated the value directly as a positive number and then applied a negative sign, which is incorrect for two's complement.", "isCorrect": false },
+                    { "text": "242", "rationale": "This is the positive value if the MSB was not interpreted as a sign bit.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Describe how text is represented in a computer and name two common character sets.",
+                "hint": "Think about how individual characters are stored and encoded digitally.",
+                "answerOptions": [
+                    { "text": "Text is stored as images; JPEG and PNG.", "rationale": "Text is not typically stored as images for processing; image formats are for visual data.", "isCorrect": false },
+                    { "text": "Text characters are assigned unique binary codes; ASCII and Unicode.", "rationale": "This correctly describes the encoding process and names two widely used character sets.", "isCorrect": true },
+                    { "text": "Text is converted into sound waves; MP3 and WAV.", "rationale": "Sound formats are for audio data, not text representation.", "isCorrect": false },
+                    { "text": "Text is compressed using algorithms; ZIP and RAR.", "rationale": "Compression is a process applied to data, not the fundamental way text is represented.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Explain the main advantage of Unicode over ASCII.",
+                "hint": "Consider the range of characters each character set can represent.",
+                "answerOptions": [
+                    { "text": "Unicode files are always smaller than ASCII files.", "rationale": "Unicode typically uses more bits per character, leading to larger file sizes for the same text.", "isCorrect": false },
+                    { "text": "Unicode is only used for programming languages, while ASCII is for documents.", "rationale": "Both are used for various text data, not restricted to specific uses.", "isCorrect": false },
+                    { "text": "Unicode allows for a much wider range of characters and symbols, including different languages and emojis.", "rationale": "Unicode's primary advantage is its extensive character set, supporting global languages and symbols.", "isCorrect": true },
+                    { "text": "Unicode is a faster encoding method for data transmission.", "rationale": "The speed of encoding is not the main advantage of Unicode; its character range is.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Define 'sample rate' in the context of sound representation.",
+                "hint": "Relate 'sample rate' to how frequently an analog sound wave is measured during digitization.",
+                "answerOptions": [
+                    { "text": "The number of bits used to store each sound measurement.", "rationale": "This describes sample resolution, not sample rate.", "isCorrect": false },
+                    { "text": "The number of samples (measurements of the amplitude of a sound wave) taken per second when converting analog sound to digital.", "rationale": "This accurately defines sample rate as the frequency of capturing sound data.", "isCorrect": true },
+                    { "text": "The total duration of the sound file in seconds.", "rationale": "This refers to the length of the sound, not how frequently it's sampled.", "isCorrect": false },
+                    { "text": "The volume level of the recorded sound.", "rationale": "Volume is related to amplitude, which is measured, but not the rate of measurement.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "How does increasing the sample rate affect the quality and file size of a digital sound file?",
+                "hint": "More data points per second will capture more detail and require more storage.",
+                "answerOptions": [
+                    { "text": "Decreases quality, decreases file size.", "rationale": "Fewer samples per second would decrease quality and file size.", "isCorrect": false },
+                    { "text": "Increases quality, decreases file size.", "rationale": "Higher quality typically means more data, thus larger file size.", "isCorrect": false },
+                    { "text": "Decreases quality, increases file size.", "rationale": "Lower quality would mean less data, thus smaller file size.", "isCorrect": false },
+                    { "text": "Increases quality, increases file size.", "rationale": "A higher sample rate captures more detail of the original sound wave, improving quality, but this requires more data storage.", "isCorrect": true }
+                ]
+            },
+            {
+                "question": "Define 'resolution' in the context of image representation.",
+                "hint": "Think about the number of individual points that make up a digital image.",
+                "answerOptions": [
+                    { "text": "The number of colours that can be displayed in the image.", "rationale": "This describes colour depth, not resolution.", "isCorrect": false },
+                    { "text": "The number of pixels (picture elements) in an image, typically expressed as width x height.", "rationale": "Resolution refers to the dimensions of an image in terms of its pixel count.", "isCorrect": true },
+                    { "text": "The physical size of the image when printed.", "rationale": "Physical print size is influenced by resolution but is not the definition of digital resolution.", "isCorrect": false },
+                    { "text": "The amount of compression applied to the image file.", "rationale": "Compression reduces file size, but it's not the definition of resolution.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "What is 'color depth' in image representation?",
+                "hint": "Consider how many bits are used to define the colour of each individual pixel.",
+                "answerOptions": [
+                    { "text": "The number of pixels per inch in an image.", "rationale": "This describes pixel density (DPI/PPI), not colour depth.", "isCorrect": false },
+                    { "text": "The number of bits used to represent the colour of each individual pixel in an image.", "rationale": "Colour depth directly determines the range of colours available for each pixel.", "isCorrect": true },
+                    { "text": "The overall brightness of the image.", "rationale": "Brightness is a visual attribute, not the definition of colour depth.", "isCorrect": false },
+                    { "text": "The transparency level of the image.", "rationale": "Transparency is typically handled by an alpha channel, separate from colour depth.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "State the number of bits in a nibble.",
+                "hint": "A nibble is half of a common byte size.",
+                "answerOptions": [
+                    { "text": "2 bits", "rationale": "2 bits can only represent 4 values.", "isCorrect": false },
+                    { "text": "4 bits", "rationale": "A nibble is defined as 4 bits.", "isCorrect": true },
+                    { "text": "8 bits", "rationale": "8 bits make up a byte.", "isCorrect": false },
+                    { "text": "16 bits", "rationale": "16 bits make up a word in some architectures.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "How many mebibytes (MiB) are in a gibibyte (GiB)?",
+                "hint": "Remember the standard binary prefixes for data storage units.",
+                "answerOptions": [
+                    { "text": "1000 MiB", "rationale": "1000 is for decimal (SI) prefixes (e.g., MB in GB), not binary (IEC) prefixes like MiB in GiB.", "isCorrect": false },
+                    { "text": "1024 MiB", "rationale": "In binary (IEC) units, there are 1024 of the smaller unit in the next larger unit.", "isCorrect": true },
+                    { "text": "2048 MiB", "rationale": "This is incorrect; it would imply a factor of 2^11.", "isCorrect": false },
+                    { "text": "512 MiB", "rationale": "This is incorrect; it would imply a factor of 2^9.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "A sound file has a sample rate of 44,100 Hz, a sample resolution of 16 bits, and a length of 30 seconds. Calculate the file size in mebibytes (MiB). Show your working.",
+                "hint": "Multiply sample rate, resolution, and length to get total bits. Convert bits to bytes, then bytes to MiB using 1024 as the conversion factor.",
+                "answerOptions": [
+                    { "text": "2.523 MiB", "rationale": "Total bits = 44100 * 16 * 30 = 21,168,000 bits. Bytes = 21,168,000 / 8 = 2,646,000 bytes. MiB = 2,646,000 / (1024 * 1024) = 2.523 MiB (approx).", "isCorrect": true },
+                    { "text": "2.646 MiB", "rationale": "This would be the size in MB if using 1000 as the conversion factor for MB, but we need MiB (1024).", "isCorrect": false },
+                    { "text": "21.168 MiB", "rationale": "This would be the size in bits, not MiB.", "isCorrect": false },
+                    { "text": "0.315 MiB", "rationale": "This result is significantly too small, indicating an error in calculation or conversion.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Give two reasons why data compression is needed.",
+                "hint": "Consider the benefits related to storage and transmission of data.",
+                "answerOptions": [
+                    { "text": "To increase the quality of images and sound; to make files easier to edit.", "rationale": "Compression often reduces quality (lossy) and doesn't directly make files easier to edit.", "isCorrect": false },
+                    { "text": "To reduce the amount of storage space required for files; to reduce the bandwidth required and shorten transmission time.", "rationale": "These are the primary benefits of data compression, making data more efficient to store and transfer.", "isCorrect": true },
+                    { "text": "To encrypt sensitive data; to add metadata to files.", "rationale": "Encryption and metadata are separate processes from compression.", "isCorrect": false },
+                    { "text": "To convert file formats; to improve file compatibility across different operating systems.", "rationale": "File conversion and compatibility are not the primary reasons for compression.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Explain the difference between lossy and lossless compression.",
+                "hint": "Think about whether data is permanently removed or if it can be fully recovered.",
+                "answerOptions": [
+                    { "text": "Lossy compression is used for text files, while lossless is for multimedia.", "rationale": "Both types can be used for various data, not restricted by file type.", "isCorrect": false },
+                    { "text": "Lossy compression reduces file size by permanently removing some data, leading to a loss of quality; Lossless compression reduces file size without any loss of data, allowing the original data to be perfectly reconstructed.", "rationale": "This accurately distinguishes between the two types based on data retention and quality.", "isCorrect": true },
+                    { "text": "Lossy compression requires more processing power; Lossless compression is faster.", "rationale": "Processing power can vary, and speed is not the defining difference.", "isCorrect": false },
+                    { "text": "Lossy compression adds extra data to make files smaller; Lossless compression removes redundant data.", "rationale": "Lossy removes data, and lossless identifies and encodes redundancies more efficiently.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Give an example of a lossy compression method and a lossless compression method.",
+                "hint": "Consider common file formats that exemplify each type of compression.",
+                "answerOptions": [
+                    { "text": "Lossy: Run Length Encoding (RLE); Lossless: JPEG.", "rationale": "RLE is lossless, and JPEG is lossy.", "isCorrect": false },
+                    { "text": "Lossy: MP3; Lossless: ZIP.", "rationale": "MP3 audio compression is lossy, and ZIP archiving (which includes compression) is lossless.", "isCorrect": true },
+                    { "text": "Lossy: PNG; Lossless: GIF.", "rationale": "PNG and GIF are both lossless image formats.", "isCorrect": false },
+                    { "text": "Lossy: WAV; Lossless: AVI.", "rationale": "WAV and AVI are typically uncompressed or minimally compressed formats.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "What is the purpose of breaking down data into packets before transmission?",
+                "hint": "Consider the benefits related to efficiency and reliability of data transfer over a network.",
+                "answerOptions": [
+                    { "text": "To encrypt the data for security purposes.", "rationale": "Encryption is a separate process from packetization, though often used with it.", "isCorrect": false },
+                    { "text": "To make the data easier for humans to read.", "rationale": "Packetization is for network efficiency, not human readability.", "isCorrect": false },
+                    { "text": "To allow for more efficient and reliable transmission over networks, as packets can travel independently and be retransmitted if errors occur.", "rationale": "This highlights the key advantages of packet switching: robustness and flexibility in routing.", "isCorrect": true },
+                    { "text": "To permanently compress the data, reducing its overall size.", "rationale": "Packetization is about breaking data into chunks, not compression.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "List three components typically found in a data packet.",
+                "hint": "Think about what information a packet needs to know where it's going, what it contains, and how to verify its integrity.",
+                "answerOptions": [
+                    { "text": "IP address, MAC address, Subnet Mask", "rationale": "These are network configuration elements, not components of a single data packet.", "isCorrect": false },
+                    { "text": "Packet header, payload, trailer", "rationale": "These are the standard components of a data packet, carrying control information, the actual data, and error-checking data.", "isCorrect": true },
+                    { "text": "Operating system, application software, user data", "rationale": "These are types of software and data, not parts of a network packet.", "isCorrect": false },
+                    { "text": "CPU, RAM, Hard Drive", "rationale": "These are hardware components of a computer, not parts of a data packet.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Name two pieces of information typically found in a packet header.",
+                "hint": "The header contains information essential for routing and identifying the packet.",
+                "answerOptions": [
+                    { "text": "File name, creation date", "rationale": "These are file system attributes, not typically found in a network packet header.", "isCorrect": false },
+                    { "text": "Destination address, packet number", "rationale": "The destination address is crucial for routing, and the packet number helps reassemble data in order.", "isCorrect": true },
+                    { "text": "User password, encryption key", "rationale": "Sensitive information like passwords and keys are typically part of the encrypted payload, not openly in the header.", "isCorrect": false },
+                    { "text": "Image resolution, color depth", "rationale": "These are characteristics of image data, not general packet header information.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Describe the process of packet switching.",
+                "hint": "Focus on how data is divided, routed, and reassembled across a network.",
+                "answerOptions": [
+                    { "text": "Data is sent as a continuous stream over a dedicated, fixed connection.", "rationale": "This describes circuit switching, not packet switching.", "isCorrect": false },
+                    { "text": "Data is broken into packets, each sent individually across the network, potentially taking different routes, and then reordered upon arrival.", "rationale": "This accurately outlines the key steps of packet switching, emphasizing independent routing and reassembly.", "isCorrect": true },
+                    { "text": "Data is broadcast to all devices on a network simultaneously.", "rationale": "Broadcasting sends to all, but packet switching involves specific routing.", "isCorrect": false },
+                    { "text": "Data is stored on a central server and accessed remotely by clients.", "rationale": "This describes cloud storage or client-server architecture, not packet switching.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Explain the difference between serial and parallel data transmission.",
+                "hint": "Consider how many bits are sent at once and over how many channels.",
+                "answerOptions": [
+                    { "text": "Serial sends data over short distances, parallel over long distances.", "rationale": "Serial is generally better for long distances due to less data skew, while parallel is for short distances.", "isCorrect": false },
+                    { "text": "Serial sends data one bit at a time over a single channel; Parallel sends multiple bits simultaneously over multiple channels.", "rationale": "This correctly defines the fundamental difference in how bits are transmitted.", "isCorrect": true },
+                    { "text": "Serial is used for wired connections, parallel for wireless.", "rationale": "Both can be used in wired or wireless contexts, though serial is more common for wireless.", "isCorrect": false },
+                    { "text": "Serial is faster than parallel for all data transfers.", "rationale": "Parallel can be faster over short distances, but serial is more reliable over long distances.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Give one advantage and one disadvantage of serial data transmission.",
+                "hint": "Think about the timing of bits and the number of wires involved.",
+                "answerOptions": [
+                    { "text": "Advantage: Faster over short distances; Disadvantage: More complex wiring.", "rationale": "This describes parallel transmission.", "isCorrect": false },
+                    { "text": "Advantage: Less prone to data skew over long distances; Disadvantage: Slower for transmitting large amounts of data over short distances.", "rationale": "Serial transmission's single-line nature makes it more robust over distance but can be slower for large local transfers.", "isCorrect": true },
+                    { "text": "Advantage: Requires less power; Disadvantage: Limited to small data packets.", "rationale": "Power consumption and packet size are not primary advantages/disadvantages of serial vs. parallel.", "isCorrect": false },
+                    { "text": "Advantage: Easier to implement in hardware; Disadvantage: Higher cost.", "rationale": "Serial can be simpler in wiring, but cost varies depending on implementation.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Give one advantage and one disadvantage of parallel data transmission.",
+                "hint": "Consider the speed of transfer versus the potential for timing issues.",
+                "answerOptions": [
+                    { "text": "Advantage: More secure; Disadvantage: Less compatible.", "rationale": "Security and compatibility are not direct advantages/disadvantages of parallel transmission.", "isCorrect": false },
+                    { "text": "Advantage: Slower over short distances; Disadvantage: Less reliable.", "rationale": "Parallel is generally faster over short distances and reliability depends on distance.", "isCorrect": false },
+                    { "text": "Advantage: Faster for transmitting large amounts of data over short distances; Disadvantage: Prone to data skew over longer distances.", "rationale": "Parallel's simultaneous bit transfer offers speed locally, but timing differences become an issue over distance.", "isCorrect": true },
+                    { "text": "Advantage: Uses fewer wires; Disadvantage: More power consumption.", "rationale": "Parallel uses more wires, and power consumption is not a defining characteristic.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Distinguish between simplex, half-duplex, and full-duplex data transmission.",
+                "hint": "Focus on the directionality and simultaneity of data flow.",
+                "answerOptions": [
+                    { "text": "Simplex: one-way; Half-duplex: two-way simultaneously; Full-duplex: two-way one at a time.", "rationale": "The definitions for half-duplex and full-duplex are swapped here.", "isCorrect": false },
+                    { "text": "Simplex: data flows in one direction only; Half-duplex: data can flow in both directions, but only one direction at a time; Full-duplex: data can flow simultaneously in both directions.", "rationale": "This correctly defines the three modes of data transmission based on direction and simultaneity.", "isCorrect": true },
+                    { "text": "Simplex: wired; Half-duplex: wireless; Full-duplex: fiber optic.", "rationale": "These terms describe data flow, not the physical medium.", "isCorrect": false },
+                    { "text": "Simplex: for short distances; Half-duplex: for medium distances; Full-duplex: for long distances.", "rationale": "Distance is not the primary distinguishing factor for these transmission modes.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Describe the purpose of a Universal Serial Bus (USB) interface.",
+                "hint": "Think about what USB allows you to do with various external devices and your computer.",
+                "answerOptions": [
+                    { "text": "To provide high-speed internet access to a computer.", "rationale": "USB is primarily for connecting peripherals, not for internet access (though some modems use USB).", "isCorrect": false },
+                    { "text": "To store large amounts of data permanently.", "rationale": "USB drives store data, but the interface itself is for connection and communication, not just storage.", "isCorrect": false },
+                    { "text": "USB is a standard interface used to connect peripheral devices to a computer for communication and power supply, allowing for easy plug-and-play functionality.", "rationale": "This comprehensively describes USB's role in connecting and powering various devices with ease of use.", "isCorrect": true },
+                    { "text": "To convert analog signals to digital signals.", "rationale": "This is the role of an Analog-to-Digital Converter (ADC), not a USB interface directly.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "State one way errors can occur during data transmission.",
+                "hint": "Consider external factors or issues with the signal itself that might alter data.",
+                "answerOptions": [
+                    { "text": "Incorrect file format.", "rationale": "File format issues occur before or after transmission, not during.", "isCorrect": false },
+                    { "text": "Insufficient storage space on the receiving device.", "rationale": "Storage space issues affect saving, not the transmission of data bits.", "isCorrect": false },
+                    { "text": "Interference (e.g., electromagnetic interference), data loss, data gain, data change.", "rationale": "These are common causes of data corruption during transfer.", "isCorrect": true },
+                    { "text": "Too many users accessing the same network.", "rationale": "Too many users can cause network congestion and slow down transmission, but not directly corrupt data bits.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Explain how a parity check (odd parity) can be used to detect errors in data transmission.",
+                "hint": "Focus on the role of the extra bit and the count of '1's.",
+                "answerOptions": [
+                    { "text": "It retransmits data if a checksum mismatch is detected.", "rationale": "This describes ARQ, not a parity check.", "isCorrect": false },
+                    { "text": "With odd parity, an extra bit (parity bit) is added to a block of data to ensure the total number of '1's in the block (including the parity bit) is odd. If the receiver counts an even number of '1's, an error is detected.", "rationale": "This correctly explains how odd parity works by maintaining an odd count of '1's for error detection.", "isCorrect": true },
+                    { "text": "It compares the sent data with the received data by sending it back to the sender.", "rationale": "This describes an echo check.", "isCorrect": false },
+                    { "text": "It uses a complex algorithm to encrypt and decrypt the data, revealing errors.", "rationale": "Encryption is for security, not error detection through parity.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Describe the process of an echo check for error detection.",
+                "hint": "Think about the communication path for verification.",
+                "answerOptions": [
+                    { "text": "The sender calculates a value and sends it with the data; the receiver recalculates and compares.", "rationale": "This describes a checksum, not an echo check.", "isCorrect": false },
+                    { "text": "The receiver sends the received data back to the sender. The sender then compares the echoed data with the original sent data. If they differ, an error is detected.", "rationale": "This accurately outlines the echo check process, where data is sent back for verification.", "isCorrect": true },
+                    { "text": "A special bit is added to ensure an even number of 1s in the data.", "rationale": "This describes an even parity check.", "isCorrect": false },
+                    { "text": "The data is transmitted multiple times, and the most frequent version is assumed correct.", "rationale": "This describes redundancy or voting systems, not an echo check.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "What is a check digit and where might it be used? Give an example.",
+                "hint": "Consider a single digit added to a number for validation, often found on product codes or identifiers.",
+                "answerOptions": [
+                    { "text": "A digit used to encrypt sensitive information; e.g., credit card numbers.", "rationale": "Check digits are for error detection, not encryption.", "isCorrect": false },
+                    { "text": "An extra digit added to a number that is calculated from the other digits, used to detect errors during data entry; e.g., International Standard Book Numbers (ISBNs) and barcode numbers.", "rationale": "This correctly defines a check digit and provides relevant real-world examples.", "isCorrect": true },
+                    { "text": "A digit that indicates the version number of a software program; e.g., software updates.", "rationale": "Version numbers are for software identification, not data entry error detection.", "isCorrect": false },
+                    { "text": "A digit that represents the total number of characters in a string; e.g., file sizes.", "rationale": "This is a length indicator, not a check digit.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Explain how Automatic Repeat Query (ARQ) works to ensure data is received without error.",
+                "hint": "Focus on the feedback mechanism and what happens if data isn't confirmed as received.",
+                "answerOptions": [
+                    { "text": "ARQ compresses data before transmission to prevent errors.", "rationale": "Compression is separate from ARQ's error control mechanism.", "isCorrect": false },
+                    { "text": "ARQ automatically corrects any detected errors in the received data.", "rationale": "ARQ detects errors and requests retransmission; it doesn't correct them.", "isCorrect": false },
+                    { "text": "ARQ uses acknowledgements (ACK for correct receipt, NAK for error) and timeouts. If the sender doesn't receive an ACK within a set timeout period, or receives a NAK, it retransmits the data packet.", "rationale": "This accurately describes ARQ's feedback-based retransmission mechanism.", "isCorrect": true },
+                    { "text": "ARQ encrypts data to prevent errors during transmission.", "rationale": "Encryption is for security, not ARQ's error control.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Why is encryption needed when transmitting data?",
+                "hint": "Consider the purpose of scrambling data during transfer.",
+                "answerOptions": [
+                    { "text": "To make data transmission faster.", "rationale": "Encryption can add overhead, potentially slowing down transmission slightly.", "isCorrect": false },
+                    { "text": "To reduce the file size of the data being sent.", "rationale": "Compression reduces file size, not encryption.", "isCorrect": false },
+                    { "text": "To protect sensitive data from unauthorized access during transmission.", "rationale": "Encryption's primary purpose is to secure data, ensuring only intended recipients can read it.", "isCorrect": true },
+                    { "text": "To ensure data integrity and prevent errors during transmission.", "rationale": "Error detection/correction methods ensure integrity, not encryption.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Distinguish between symmetric and asymmetric encryption.",
+                "hint": "Think about the number and type of keys used for encryption and decryption.",
+                "answerOptions": [
+                    { "text": "Symmetric uses a public key, asymmetric uses a private key.", "rationale": "This is incorrect; asymmetric uses both public and private keys.", "isCorrect": false },
+                    { "text": "Symmetric encryption uses the same secret key for both encryption and decryption; Asymmetric encryption uses a pair of keys – a public key for encryption and a private key for decryption.", "rationale": "This correctly differentiates the two types based on their key usage.", "isCorrect": true },
+                    { "text": "Symmetric is for small files, asymmetric for large files.", "rationale": "Key management and security are the distinguishing factors, not file size.", "isCorrect": false },
+                    { "text": "Symmetric is faster but less secure; Asymmetric is slower but more secure.", "rationale": "Symmetric is generally faster, but security depends on key management, not just type.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Which type of encryption uses public and private keys?",
+                "hint": "This type of encryption is also known as public-key cryptography.",
+                "answerOptions": [
+                    { "text": "Symmetric encryption", "rationale": "Symmetric encryption uses a single, shared secret key.", "isCorrect": false },
+                    { "text": "Hash encryption", "rationale": "Hashing is a one-way function for data integrity, not encryption with keys.", "isCorrect": false },
+                    { "text": "Asymmetric encryption", "rationale": "Asymmetric encryption is defined by its use of a public-private key pair.", "isCorrect": true },
+                    { "text": "Caesar cipher", "rationale": "Caesar cipher is a simple substitution cipher, a form of symmetric encryption, but not using public/private keys.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "What is the primary role of the Central Processing Unit (CPU) in a computer?",
+                "hint": "Think about what part of the computer is responsible for carrying out instructions and calculations.",
+                "answerOptions": [
+                    { "text": "To store all permanent data and files.", "rationale": "This is the role of secondary storage (e.g., hard drive), not the CPU.", "isCorrect": false },
+                    { "text": "To manage all input and output devices.", "rationale": "The operating system manages devices, with the CPU executing those management instructions.", "isCorrect": false },
+                    { "text": "The CPU processes instructions and data that are input into the computer so that the result can be output.", "rationale": "This accurately describes the CPU's core function as the 'brain' of the computer, executing instructions and performing calculations.", "isCorrect": true },
+                    { "text": "To provide a graphical user interface for the user.", "rationale": "The operating system provides the GUI, though the CPU executes the instructions to render it.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Name three components found within a CPU that has a Von Neumann architecture.",
+                "hint": "Consider the main units responsible for logic, control, and temporary data storage within the processor.",
+                "answerOptions": [
+                    { "text": "Hard Drive, Monitor, Keyboard", "rationale": "These are external hardware components, not internal CPU components.", "isCorrect": false },
+                    { "text": "Arithmetic Logic Unit (ALU), Control Unit (CU), Program Counter (PC)", "rationale": "These are key functional units and registers within a Von Neumann CPU.", "isCorrect": true },
+                    { "text": "Webcam, Microphone, Speakers", "rationale": "These are input/output devices, not CPU components.", "isCorrect": false },
+                    { "text": "Router, Switch, Modem", "rationale": "These are network devices, not CPU components.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "How do the number of cores and the clock speed affect the performance of a CPU?",
+                "hint": "Think about how multiple processing units and the rate of instruction execution contribute to overall speed.",
+                "answerOptions": [
+                    { "text": "More cores increase power consumption, and clock speed affects display brightness.", "rationale": "While cores affect power, display brightness is unrelated to clock speed.", "isCorrect": false },
+                    { "text": "More cores allow a CPU to perform multiple tasks simultaneously; Higher clock speed means the CPU can execute more instructions per second. Both generally lead to better performance.", "rationale": "This correctly explains how both factors contribute to a CPU's overall processing capability.", "isCorrect": true },
+                    { "text": "More cores reduce the need for RAM, and clock speed determines network bandwidth.", "rationale": "Cores don't reduce RAM needs, and clock speed doesn't determine network bandwidth.", "isCorrect": false },
+                    { "text": "Both cores and clock speed only affect the computer's startup time.", "rationale": "They affect overall performance, not just startup time.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "What is an 'instruction set' for a CPU?",
+                "hint": "Consider the fundamental commands that a specific processor is designed to understand and execute.",
+                "answerOptions": [
+                    { "text": "A collection of pre-installed software applications on a computer.", "rationale": "An instruction set is hardware-level commands, not software applications.", "isCorrect": false },
+                    { "text": "A list of all the commands (machine code instructions) that a specific CPU can understand and execute.", "rationale": "This accurately defines an instruction set as the native language of a CPU.", "isCorrect": true },
+                    { "text": "The set of rules for connecting peripheral devices to a computer.", "rationale": "This describes interface standards (like USB), not CPU instructions.", "isCorrect": false },
+                    { "text": "The programming language used to develop operating systems.", "rationale": "Operating systems are written in high-level languages, which are then translated into machine code based on the instruction set.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Give two characteristics of an embedded system.",
+                "hint": "Think about their purpose and typical resource constraints.",
+                "answerOptions": [
+                    { "text": "Designed for general-purpose computing; high-performance graphics card.", "rationale": "Embedded systems are typically specialized, not general-purpose, and often have limited graphics.", "isCorrect": false },
+                    { "text": "Requires constant internet connection; runs complex user applications.", "rationale": "Many embedded systems operate offline and perform dedicated functions, not complex user apps.", "isCorrect": false },
+                    { "text": "Designed to perform a dedicated, specific function; often part of a larger mechanical or electrical system.", "rationale": "These are defining characteristics of embedded systems, highlighting their specialization and integration.", "isCorrect": true },
+                    { "text": "Has a large amount of RAM; uses a powerful multi-core CPU.", "rationale": "Embedded systems often have limited resources to keep costs and power consumption low.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Name two devices where embedded systems are commonly used.",
+                "hint": "Look around your home or consider common appliances and vehicles.",
+                "answerOptions": [
+                    { "text": "Desktop computer, Laptop", "rationale": "These are general-purpose computers, not typically considered embedded systems.", "isCorrect": false },
+                    { "text": "Washing machine, Car engine management system", "rationale": "These are common examples where dedicated computer systems are integrated into a larger product to perform specific functions.", "isCorrect": true },
+                    { "text": "Large supercomputer, Data server", "rationale": "These are powerful computing systems, but not typically embedded.", "isCorrect": false },
+                    { "text": "Smartphone, Tablet", "rationale": "While they contain embedded components, smartphones and tablets are often classified as general-purpose mobile computing devices.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "What is the purpose of an input device? Give two examples.",
+                "hint": "Think about how users interact with a computer to provide information.",
+                "answerOptions": [
+                    { "text": "To display information to the user; e.g., printer, speaker.", "rationale": "This describes output devices.", "isCorrect": false },
+                    { "text": "To store data permanently; e.g., hard drive, SSD.", "rationale": "This describes storage devices.", "isCorrect": false },
+                    { "text": "To send data and instructions into a computer; e.g., keyboard, mouse.", "rationale": "This correctly defines input devices and provides common examples.", "isCorrect": true },
+                    { "text": "To process data and execute instructions; e.g., CPU, GPU.", "rationale": "This describes processing units.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "What is the purpose of an output device? Give two examples.",
+                "hint": "Think about how a computer communicates results or information back to the user.",
+                "answerOptions": [
+                    { "text": "To receive data from other computers; e.g., network card, modem.", "rationale": "These are network communication devices, not primarily output devices for users.", "isCorrect": false },
+                    { "text": "To present processed data or information from a computer to the user or another system; e.g., monitor, printer.", "rationale": "This correctly defines output devices and provides common examples.", "isCorrect": true },
+                    { "text": "To convert physical movements into digital signals; e.g., joystick, trackpad.", "rationale": "These are input devices.", "isCorrect": false },
+                    { "text": "To manage the flow of electricity within the computer; e.g., power supply, voltage regulator.", "rationale": "These are power management components, not output devices.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Identify the type of data captured by a temperature sensor.",
+                "hint": "A temperature sensor measures a specific physical property.",
+                "answerOptions": [
+                    { "text": "Light intensity", "rationale": "A light sensor captures light intensity.", "isCorrect": false },
+                    { "text": "Pressure", "rationale": "A pressure sensor captures pressure.", "isCorrect": false },
+                    { "text": "Temperature (e.g., in degrees Celsius or Fahrenheit).", "rationale": "A temperature sensor specifically measures heat or cold.", "isCorrect": true },
+                    { "text": "Motion", "rationale": "A motion sensor captures movement.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Suggest a suitable sensor for detecting whether a door is open or closed.",
+                "hint": "Consider a sensor that can detect proximity or a change in a magnetic field.",
+                "answerOptions": [
+                    { "text": "Humidity sensor", "rationale": "A humidity sensor measures moisture in the air, unrelated to door status.", "isCorrect": false },
+                    { "text": "Gas sensor", "rationale": "A gas sensor detects gas levels, unrelated to door status.", "isCorrect": false },
+                    { "text": "Temperature sensor", "rationale": "A temperature sensor measures heat, not whether a door is open or closed.", "isCorrect": false },
+                    { "text": "Proximity sensor or Magnetic field sensor", "rationale": "A proximity sensor can detect if something is near, and a magnetic sensor can detect if a magnetic contact is broken, both suitable for door status.", "isCorrect": true }
+                ]
+            },
+            {
+                "question": "Distinguish between primary storage and secondary storage.",
+                "hint": "Think about direct CPU access, volatility, and typical use cases.",
+                "answerOptions": [
+                    { "text": "Primary storage is for long-term backups, secondary storage is for active data.", "rationale": "This is the opposite of their primary functions.", "isCorrect": false },
+                    { "text": "Primary storage (e.g., RAM, ROM) is directly accessed by the CPU and is volatile (loses data when power is off, except ROM); Secondary storage (e.g., HDD, SSD) is not directly accessed by the CPU, is non-volatile, and used for more permanent storage of data.", "rationale": "This accurately differentiates primary and secondary storage based on CPU access, volatility, and purpose.", "isCorrect": true },
+                    { "text": "Primary storage is always faster and larger than secondary storage.", "rationale": "Primary storage is faster, but secondary storage is typically much larger.", "isCorrect": false },
+                    { "text": "Primary storage is only for input, secondary storage is only for output.", "rationale": "Both types of storage are used for both input and output of data to/from the CPU.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Explain the role of RAM and ROM in a computer system.",
+                "hint": "Consider which one is for active, temporary data and which one holds essential, permanent startup instructions.",
+                "answerOptions": [
+                    { "text": "RAM stores the operating system permanently, and ROM stores user files.", "rationale": "RAM is volatile and stores active data; ROM stores firmware, not user files.", "isCorrect": false },
+                    { "text": "RAM (Random Access Memory): Volatile primary storage used to hold data and programs currently being used by the CPU. It allows fast read/write access. ROM (Read Only Memory): Non-volatile primary storage that holds essential boot-up instructions (firmware) that cannot be easily altered.", "rationale": "This accurately describes the distinct roles and characteristics of RAM and ROM.", "isCorrect": true },
+                    { "text": "Both RAM and ROM are types of secondary storage used for long-term data archiving.", "rationale": "Both are primary storage, and neither is primarily for archiving.", "isCorrect": false },
+                    { "text": "RAM is for network connections, and ROM is for graphics processing.", "rationale": "These are incorrect roles for RAM and ROM.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Describe how magnetic storage (e.g., Hard Disk Drive) operates.",
+                "hint": "Focus on the physical components and the method of storing binary data.",
+                "answerOptions": [
+                    { "text": "It uses lasers to burn pits and lands onto a disc surface.", "rationale": "This describes optical storage.", "isCorrect": false },
+                    { "text": "It stores data in electrical circuits using transistors.", "rationale": "This describes solid-state (flash) storage.", "isCorrect": false },
+                    { "text": "It uses spinning platters coated with magnetic material. Data is read and written by electromagnets that magnetize tiny areas on the platters to represent binary 0s and 1s.", "rationale": "This correctly explains the mechanical and magnetic principles behind hard disk drives.", "isCorrect": true },
+                    { "text": "It uses a network connection to store data on remote servers.", "rationale": "This describes cloud storage.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Describe how optical storage (e.g., CD, DVD) operates.",
+                "hint": "Think about how light is used to read and write data on a disc.",
+                "answerOptions": [
+                    { "text": "It uses spinning platters and read/write heads to magnetize areas.", "rationale": "This describes magnetic storage.", "isCorrect": false },
+                    { "text": "It stores data in non-volatile flash memory cells.", "rationale": "This describes solid-state storage.", "isCorrect": false },
+                    { "text": "It uses lasers to create and read 'pits' (non-reflective areas) and 'lands' (reflective areas) onto a disc's surface. A laser then reflects off these areas to read the data.", "rationale": "This accurately details the laser-based read/write mechanism of optical discs.", "isCorrect": true },
+                    { "text": "It transmits data wirelessly using radio waves.", "rationale": "This describes wireless communication, not optical storage.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Describe how solid-state (flash memory) storage (e.g., SSD) operates.",
+                "hint": "Consider the electronic components and the absence of moving parts.",
+                "answerOptions": [
+                    { "text": "It uses spinning magnetic disks to store data.", "rationale": "This describes magnetic storage.", "isCorrect": false },
+                    { "text": "It burns data onto a disc with a laser.", "rationale": "This describes optical storage.", "isCorrect": false },
+                    { "text": "It stores data in electrical circuits using transistors as control and floating gates, which trap electrons to represent binary 0s and 1s, without any moving parts.", "rationale": "This correctly explains the electronic, non-mechanical operation of solid-state drives.", "isCorrect": true },
+                    { "text": "It relies on continuous power supply to retain data.", "rationale": "Flash memory is non-volatile, meaning it retains data without power.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Explain what is meant by cloud storage.",
+                "hint": "Think about where the data is physically located and how it is accessed.",
+                "answerOptions": [
+                    { "text": "Data stored on a USB flash drive connected to a local computer.", "rationale": "This is local storage, not cloud storage.", "isCorrect": false },
+                    { "text": "A model of computer data storage in which digital data is stored in logical pools, typically across multiple servers, and the physical environment is owned and managed by a hosting provider. Users access their data remotely over the internet.", "rationale": "This accurately defines cloud storage as remote, provider-managed data storage accessible via the internet.", "isCorrect": true },
+                    { "text": "Data stored on a computer's main hard drive.", "rationale": "This is local storage.", "isCorrect": false },
+                    { "text": "A system for backing up data to tape drives in a secure vault.", "rationale": "While a form of backup, this is not the definition of cloud storage.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Give two advantages of storing data on the cloud compared to storing it locally.",
+                "hint": "Consider benefits related to accessibility, backup, and scalability.",
+                "answerOptions": [
+                    { "text": "Faster access speeds; lower monthly costs.", "rationale": "Local access can be faster, and cloud storage often involves ongoing costs.", "isCorrect": false },
+                    { "text": "Requires no internet connection; complete control over physical security.", "rationale": "Cloud storage requires internet, and physical security is managed by the provider.", "isCorrect": false },
+                    { "text": "Accessibility from anywhere with an internet connection; automatic backups and disaster recovery managed by the provider.", "rationale": "These are key benefits of cloud storage, offering flexibility and resilience.", "isCorrect": true },
+                    { "text": "Better privacy control; no subscription fees.", "rationale": "Privacy can be a concern with third-party storage, and fees are common.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Give two disadvantages of storing data on the cloud compared to storing it locally.",
+                "hint": "Think about potential drawbacks related to connectivity, security, and ongoing costs.",
+                "answerOptions": [
+                    { "text": "Always faster access; no security risks.", "rationale": "Cloud access depends on internet speed, and security risks exist.", "isCorrect": false },
+                    { "text": "Requires an internet connection to access data; potential security and privacy concerns.", "rationale": "These are significant drawbacks, as offline access is limited and data is entrusted to a third party.", "isCorrect": true },
+                    { "text": "Limited storage capacity; no automatic backups.", "rationale": "Cloud storage typically offers vast and scalable capacity, often with automatic backups.", "isCorrect": false },
+                    { "text": "Higher initial setup cost; difficult to share data.", "rationale": "Initial setup is often minimal, and cloud storage facilitates sharing.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "What is the purpose of a Network Interface Card (NIC)?",
+                "hint": "Consider what hardware component allows a computer to participate in a network.",
+                "answerOptions": [
+                    { "text": "To process graphical information for display.", "rationale": "This is the role of a Graphics Processing Unit (GPU).", "isCorrect": false },
+                    { "text": "To store temporary data for the CPU.", "rationale": "This is the role of RAM.", "isCorrect": false },
+                    { "text": "To allow a computer to connect to a network (e.g., Ethernet or Wi-Fi) by providing the necessary hardware circuitry and protocols for communication.", "rationale": "The NIC is essential for a device to communicate over a network.", "isCorrect": true },
+                    { "text": "To convert analog audio signals into digital data.", "rationale": "This is the role of a sound card or ADC.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "What is a Media Access Control (MAC) address and how is it structured?",
+                "hint": "Think about a unique hardware identifier assigned to network adapters.",
+                "answerOptions": [
+                    { "text": "A temporary address assigned by a router; it changes frequently.", "rationale": "This describes a dynamic IP address, not a MAC address.", "isCorrect": false },
+                    { "text": "A unique identifier assigned to a network interface controller (NIC) for communications within a network segment. It is usually written as a 12-digit hexadecimal number, with the first six digits identifying the manufacturer and the last six being a unique serial number for the device.", "rationale": "This accurately defines a MAC address and its standard hexadecimal structure.", "isCorrect": true },
+                    { "text": "A software address used for internet routing; it is assigned by an ISP.", "rationale": "This describes an IP address, not a MAC address.", "isCorrect": false },
+                    { "text": "A security key used to encrypt wireless network traffic; it is randomly generated.", "rationale": "This describes a Wi-Fi password or encryption key, not a MAC address.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "What is an Internet Protocol (IP) address?",
+                "hint": "Consider the numerical identifier that allows devices to communicate across the internet.",
+                "answerOptions": [
+                    { "text": "A physical address embedded in the network hardware.", "rationale": "This describes a MAC address.", "isCorrect": false },
+                    { "text": "A numerical label assigned to each device connected to a computer network that uses the Internet Protocol for communication. It serves two main functions: host or network interface identification and location addressing.", "rationale": "This correctly defines an IP address and its dual purpose in networking.", "isCorrect": true },
+                    { "text": "A unique name given to a website on the World Wide Web.", "rationale": "This describes a domain name (e.g., google.com).", "isCorrect": false },
+                    { "text": "A password used to access a secure network.", "rationale": "An IP address is an identifier, not a password.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "State the difference between IPv4 and IPv6 addresses.",
+                "hint": "Focus on the length of the address and how it's typically represented.",
+                "answerOptions": [
+                    { "text": "IPv4 is for local networks, IPv6 is for the internet.", "rationale": "Both are used for both local and internet addressing.", "isCorrect": false },
+                    { "text": "IPv4 addresses are 32-bit numbers, typically represented as four decimal numbers separated by dots; IPv6 addresses are 128-bit numbers, typically represented as eight groups of four hexadecimal digits separated by colons.", "rationale": "This correctly highlights the key differences in length and notation between IPv4 and IPv6.", "isCorrect": true },
+                    { "text": "IPv4 is older and faster, IPv6 is newer and slower.", "rationale": "IPv6 is newer, but speed is not a primary distinguishing factor in this way.", "isCorrect": false },
+                    { "text": "IPv4 uses letters and numbers, IPv6 uses only numbers.", "rationale": "IPv4 uses only numbers; IPv6 uses hexadecimal (numbers and letters A-F).", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Describe the role of a router in a network.",
+                "hint": "Think about how data moves between different network segments or to the internet.",
+                "answerOptions": [
+                    { "text": "To provide power to network devices.", "rationale": "Power over Ethernet (PoE) can provide power, but it's not the primary role of a router.", "isCorrect": false },
+                    { "text": "To connect multiple devices to the same local network segment.", "rationale": "This is primarily the role of a network switch.", "isCorrect": false },
+                    { "text": "A router connects different networks and forwards data packets between them. It determines the best path for data to travel to its destination, assigns IP addresses to devices on a local network, and can connect a local network to the internet.", "rationale": "This comprehensively describes the various routing and network management functions of a router.", "isCorrect": true },
+                    { "text": "To translate website domain names into IP addresses.", "rationale": "This is the role of a Domain Name System (DNS) server.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Distinguish between system software and application software, giving an example of each.",
+                "hint": "Consider what software manages the computer's operations versus what software helps the user perform specific tasks.",
+                "answerOptions": [
+                    { "text": "System software is for gaming, application software is for productivity.", "rationale": "This is an oversimplification and not a fundamental distinction.", "isCorrect": false },
+                    { "text": "System software provides the services that the computer requires to function and manage its hardware (e.g., Operating System); Application software provides services that the user requires to perform specific tasks (e.g., Word processor).", "rationale": "This correctly defines and exemplifies the two main categories of software based on their purpose.", "isCorrect": true },
+                    { "text": "System software is always free, application software is always paid.", "rationale": "Cost is not a distinguishing factor between system and application software.", "isCorrect": false },
+                    { "text": "System software runs on the internet, application software runs locally.", "rationale": "Both types can run locally or be cloud-based.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "List three basic functions of an operating system.",
+                "hint": "Think about what an OS does to manage the computer's resources and allow programs to run.",
+                "answerOptions": [
+                    { "text": "Creating spreadsheets, editing photos, playing music.", "rationale": "These are functions of application software, not the operating system itself.", "isCorrect": false },
+                    { "text": "Managing files, handling interrupts, providing an interface.", "rationale": "These are core responsibilities of an operating system in managing computer resources and user interaction.", "isCorrect": true },
+                    { "text": "Designing hardware, manufacturing chips, assembling computers.", "rationale": "These are hardware development and manufacturing tasks, not OS functions.", "isCorrect": false },
+                    { "text": "Writing code, debugging programs, compiling software.", "rationale": "These are tasks performed by developers using development tools, not basic OS functions.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Explain the relationship between hardware, firmware, and an operating system in running application software.",
+                "hint": "Consider the layers of software and hardware that interact to make a computer functional.",
+                "answerOptions": [
+                    { "text": "Hardware directly runs application software, bypassing the operating system and firmware.", "rationale": "Application software requires an OS, which relies on firmware to interact with hardware.", "isCorrect": false },
+                    { "text": "Application software runs on the operating system. The operating system is run on the firmware (e.g., BIOS/UEFI), which is embedded software that provides low-level control for the hardware. The firmware, in turn, runs directly on the hardware.", "rationale": "This accurately describes the hierarchical relationship and dependencies between these components.", "isCorrect": true },
+                    { "text": "Firmware is a type of application software that controls hardware directly, without an operating system.", "rationale": "Firmware is distinct from application software and often works with an OS.", "isCorrect": false },
+                    { "text": "The operating system is part of the hardware, and firmware is a type of application.", "rationale": "The OS is software, and firmware is also software, distinct from applications.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "What is an interrupt and how is it handled by the CPU?",
+                "hint": "Think about a signal that demands the CPU's immediate attention and how the CPU responds.",
+                "answerOptions": [
+                    { "text": "An interrupt is a type of software bug that causes a program to crash; the CPU ignores it.", "rationale": "An interrupt is a signal, not necessarily a bug, and the CPU handles it.", "isCorrect": false },
+                    { "text": "An interrupt is a signal to the CPU indicating that an event has occurred that requires immediate attention. When an interrupt occurs, the CPU suspends its current task, saves its state, and executes an Interrupt Service Routine (ISR) to handle the event. After handling, the CPU resumes its original task.", "rationale": "This correctly defines an interrupt and outlines the CPU's process for managing it.", "isCorrect": true },
+                    { "text": "An interrupt is a command from the user to shut down the computer; the CPU powers off.", "rationale": "An interrupt is a signal for an event, not a shutdown command.", "isCorrect": false },
+                    { "text": "An interrupt is a security measure that blocks unauthorized access; the CPU activates a firewall.", "rationale": "Interrupts are for event handling, not security measures like firewalls.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Give an example of a hardware interrupt and a software interrupt.",
+                "hint": "Consider events initiated by physical devices versus events generated by running programs.",
+                "answerOptions": [
+                    { "text": "Hardware: Powering off the computer; Software: Opening a web browser.", "rationale": "Powering off is a user action, and opening a browser is an application launch, not typical interrupts.", "isCorrect": false },
+                    { "text": "Hardware: Pressing a key on the keyboard; Software: Division by zero error.", "rationale": "Pressing a key is a physical event, and division by zero is a program-generated error, both valid interrupt examples.", "isCorrect": true },
+                    { "text": "Hardware: Installing new software; Software: Connecting to Wi-Fi.", "rationale": "These are user/system actions, not direct interrupt examples.", "isCorrect": false },
+                    { "text": "Hardware: Printing a document; Software: Saving a file.", "rationale": "These are application tasks, not direct interrupt examples.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Explain the difference between a high-level language and a low-level language, giving one advantage of each.",
+                "hint": "Think about how close the language is to human readability versus machine understanding.",
+                "answerOptions": [
+                    { "text": "High-level: Faster execution; Low-level: Easier to learn.", "rationale": "Low-level is generally faster, high-level is easier to learn.", "isCorrect": false },
+                    { "text": "High-level: Closer to human language, uses English-like syntax. Advantage: Easier to read, write, and debug. Low-level: Closer to machine code, directly interacts with hardware (e.g., assembly language). Advantage: Provides direct manipulation of hardware, can be very efficient and fast.", "rationale": "This accurately contrasts the two language types based on their abstraction level and provides a key advantage for each.", "isCorrect": true },
+                    { "text": "High-level: Requires no translation; Low-level: Requires a compiler.", "rationale": "High-level languages require translation; low-level assembly requires an assembler.", "isCorrect": false },
+                    { "text": "High-level: Only for web development; Low-level: Only for operating systems.", "rationale": "Both have broader applications beyond these specific examples.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Compare the operation of a compiler and an interpreter in translating high-level language.",
+                "hint": "Consider whether the entire program is translated at once or line-by-line.",
+                "answerOptions": [
+                    { "text": "Compiler: Translates line-by-line; Interpreter: Translates the whole program at once.", "rationale": "This is the opposite of how compilers and interpreters work.", "isCorrect": false },
+                    { "text": "Compiler: Translates the entire high-level program into machine code (an executable file) before execution. It provides an error report for the whole code if errors are detected. Interpreter: Translates and executes the high-level program line-by-line. It stops execution and reports an error as soon as one is found.","rationale": "This accurately compares the two translation methods, highlighting their approach to execution and error reporting.", "isCorrect": true },
+                    { "text": "Compiler: Used for scripting languages; Interpreter: Used for compiled languages.", "rationale": "Compilers are for compiled languages; interpreters are for interpreted (scripting) languages.", "isCorrect": false },
+                    { "text": "Compiler: Creates human-readable code; Interpreter: Creates machine-readable code.", "rationale": "Both produce machine-readable code; the source is human-readable.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "List three common functions provided by an Integrated Development Environment (IDE).",
+                "hint": "Think about the tools that make coding, testing, and debugging easier for programmers.",
+                "answerOptions": [
+                    { "text": "Web browsing, email management, video playback.", "rationale": "These are functions of general application software, not an IDE.", "isCorrect": false },
+                    { "text": "Code editor, run-time environment, error diagnostics/debugging tools.", "rationale": "These are core features of an IDE, supporting the entire software development process.", "isCorrect": true },
+                    { "text": "Hardware manufacturing, circuit board design, chip fabrication.", "rationale": "These are hardware engineering tasks, not IDE functions.", "isCorrect": false },
+                    { "text": "Operating system installation, driver updates, network configuration.", "rationale": "These are system administration tasks, not primary IDE functions.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "What is the internet?",
+                "hint": "Consider the global network infrastructure that connects computers worldwide.",
+                "answerOptions": [
+                    { "text": "A collection of websites and web pages accessed using a web browser.", "rationale": "This describes the World Wide Web, which runs on the internet.", "isCorrect": false },
+                    { "text": "A global system of interconnected computer networks that uses the Internet Protocol (IP) suite to communicate between networks and devices.", "rationale": "This accurately defines the internet as the underlying infrastructure.", "isCorrect": true },
+                    { "text": "A specific software application used for sending emails.", "rationale": "Email is an application that uses the internet, not the internet itself.", "isCorrect": false },
+                    { "text": "A physical device that connects a home network to the outside world.", "rationale": "This describes a router or modem, which are part of connecting to the internet, not the internet itself.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "What is the World Wide Web?",
+                "hint": "Think about the system of interlinked documents and other web resources accessed via the internet.",
+                "answerOptions": [
+                    { "text": "The physical cables and routers that make up the internet.", "rationale": "This describes the internet's infrastructure.", "isCorrect": false },
+                    { "text": "A global system of interconnected computer networks.", "rationale": "This describes the internet.", "isCorrect": false },
+                    { "text": "A collection of websites and web pages accessed using the internet.", "rationale": "This accurately defines the World Wide Web as the content layer built on the internet.", "isCorrect": true },
+                    { "text": "A protocol for secure data transmission over a network.", "rationale": "This describes a protocol like HTTPS, not the Web itself.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "What is a Uniform Resource Locator (URL)?",
+                "hint": "Consider the address used to find resources on the World Wide Web.",
+                "answerOptions": [
+                    { "text": "A type of network cable used to connect computers.", "rationale": "A URL is a logical address, not a physical cable.", "isCorrect": false },
+                    { "text": "A text-based address for a web page; it can contain the protocol, the domain name, and the web page/file name.", "rationale": "This correctly defines a URL as the structured address for web resources.", "isCorrect": true },
+                    { "text": "A security protocol for encrypting web traffic.", "rationale": "This describes HTTPS, not a URL.", "isCorrect": false },
+                    { "text": "A small text file stored on a user's computer by a website.", "rationale": "This describes a cookie.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Explain the purpose of Hypertext Transfer Protocol (HTTP) and Hypertext Transfer Protocol Secure (HTTPS).",
+                "hint": "Focus on their role in web communication and the key difference in security.",
+                "answerOptions": [
+                    { "text": "HTTP is for sending emails, HTTPS is for instant messaging.", "rationale": "These protocols are for web communication, not email or instant messaging.", "isCorrect": false },
+                    { "text": "HTTP is for transferring files over a network, HTTPS is for managing databases.", "rationale": "They are for web page transfer, not general file transfer or database management.", "isCorrect": false },
+                    { "text": "HTTP is the protocol for transferring hypertext over the Web; HTTPS is the secure version of HTTP that encrypts data for secure communication.", "rationale": "This correctly identifies their roles in web communication and the added security of HTTPS.", "isCorrect": true },
+                    { "text": "HTTP is for local network communication, HTTPS is for wide area networks.", "rationale": "Both can be used on various network scales, not limited by network type.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Explain the purpose and functions of a web browser.",
+                "hint": "Think about what software allows you to view and interact with websites.",
+                "answerOptions": [
+                    { "text": "To host websites and store web pages.", "rationale": "This is the role of a web server.", "isCorrect": false },
+                    { "text": "To create web pages using HTML and CSS.", "rationale": "This is the role of a web developer or development software.", "isCorrect": false },
+                    { "text": "The main purpose of a web browser is to render hypertext markup language (HTML) and display web pages. Functions include storing bookmarks, recording user history, and providing navigation tools.", "rationale": "This accurately describes the primary function of a web browser and lists common features.", "isCorrect": true },
+                    { "text": "To manage network connections and assign IP addresses.", "rationale": "This is the role of network hardware like routers and operating systems.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Describe how web pages are located, retrieved, and displayed on a device when a user enters a URL.",
+                "hint": "Follow the path from the browser, through DNS, to the server, and back to the browser for rendering.",
+                "answerOptions": [
+                    { "text": "The browser directly contacts the web page, which then sends the HTML to the device for display.", "rationale": "The process involves DNS resolution and web servers, not direct contact with the page itself.", "isCorrect": false },
+                    { "text": "The web browser sends the URL to a Domain Name Server (DNS) to get the IP address. The browser then sends a request to the web server at that IP address. The web server sends the HTML, CSS, and JavaScript back to the browser, which renders and displays the web page.", "rationale": "This correctly outlines the steps involved in accessing and displaying a web page.", "isCorrect": true },
+                    { "text": "The device's operating system downloads the entire website to local storage before displaying it.", "rationale": "Web pages are typically streamed and rendered as they are received, not fully downloaded first.", "isCorrect": false },
+                    { "text": "The user's internet service provider (ISP) stores all web pages and sends them directly to the device.", "rationale": "ISPs provide internet access, but web pages are stored on web servers.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Explain what is meant by cookies and how they are used, including session cookies and persistent cookies.",
+                "hint": "Think about small pieces of data websites store on your computer and their different lifespans.",
+                "answerOptions": [
+                    { "text": "Cookies are malicious software used to steal user data; they are always harmful.", "rationale": "Cookies are legitimate tools, though they can be misused or raise privacy concerns.", "isCorrect": false },
+                    { "text": "Cookies are used for functions, including saving personal details, tracking user preferences, holding items in an online shopping cart, and storing login details. Session cookies are temporary and deleted when the browser closes; persistent cookies remain for a set period or until manually deleted.", "rationale": "This accurately defines cookies and explains the difference between session and persistent types and their uses.", "isCorrect": true },
+                    { "text": "Cookies are encrypted files that contain website source code; they are used to speed up website loading.", "rationale": "Cookies are small data files, not source code, and their primary role isn't speeding up loading.", "isCorrect": false },
+                    { "text": "Cookies are pop-up advertisements that appear on websites; they are always annoying.", "rationale": "Cookies are data files, not advertisements.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Understand the concept of a digital currency and how digital currencies are used.",
+                "hint": "Consider currencies that exist purely electronically, without physical form.",
+                "answerOptions": [
+                    { "text": "A physical coin or banknote that has been scanned and stored digitally.", "rationale": "Digital currency exists only electronically, not as a scanned physical item.", "isCorrect": false },
+                    { "text": "A digital currency is one that only exists electronically. They are used for online transactions, peer-to-peer payments, and as a store of value, often decentralized.", "rationale": "This correctly defines digital currency and its common applications.", "isCorrect": true },
+                    { "text": "A system for exchanging physical goods for digital services.", "rationale": "This describes e-commerce or digital marketplaces, not digital currency itself.", "isCorrect": false },
+                    { "text": "A traditional currency (like USD) that is converted into a digital format for online banking.", "rationale": "While traditional currency can be used digitally, 'digital currency' specifically refers to currencies that originate and exist purely in digital form.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Understand the process of blockchain and how it is used to track digital currency transactions.",
+                "hint": "Think about a distributed, immutable ledger that records transactions in blocks.",
+                "answerOptions": [
+                    { "text": "Blockchain is a centralized database managed by a single bank to track all transactions.", "rationale": "Blockchain is decentralized, not centralized.", "isCorrect": false },
+                    { "text": "Blockchain is a digital ledger, that is a time-stamped series of records (blocks) that are cryptographically linked and secured, making them resistant to modification. Each block contains a list of transactions, and once added, it cannot be altered, providing a secure and transparent record of digital currency transactions.", "rationale": "This accurately describes blockchain's structure and its use in securing transactions.", "isCorrect": true },
+                    { "text": "Blockchain is a type of encryption used to secure individual digital currency transactions.", "rationale": "Blockchain uses cryptography, but it's a ledger system, not just an encryption method.", "isCorrect": false },
+                    { "text": "Blockchain is a method for mining new digital currency by solving complex puzzles.", "rationale": "Mining is a process on a blockchain, but it's not the definition of blockchain itself.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Describe the processes involved in, and the aim of carrying out, a brute-force attack.",
+                "hint": "Think about repeatedly trying combinations to guess credentials.",
+                "answerOptions": [
+                    { "text": "Sending fake emails to trick users into revealing information; aim is to steal credentials.", "rationale": "This describes phishing.", "isCorrect": false },
+                    { "text": "Repeatedly trying every possible combination of characters (e.g., for a password or encryption key) until the correct one is found; aim is to gain unauthorized access.", "rationale": "This accurately describes the exhaustive trial-and-error nature of a brute-force attack and its objective.", "isCorrect": true },
+                    { "text": "Installing malicious software on a user's computer without their knowledge; aim is to damage files.", "rationale": "This describes malware, not a brute-force attack.", "isCorrect": false },
+                    { "text": "Intercepting data as it travels over a network; aim is to read sensitive information.", "rationale": "This describes data interception.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Describe the processes involved in, and the aim of carrying out, a Distributed Denial of Service (DDoS) attack.",
+                "hint": "Consider overwhelming a server with traffic from multiple sources.",
+                "answerOptions": [
+                    { "text": "Stealing personal information by redirecting users to fake websites; aim is identity theft.", "rationale": "This describes pharming.", "isCorrect": false },
+                    { "text": "Using multiple compromised computer systems as sources to flood a target server or network with an overwhelming amount of traffic; aim is to disrupt normal service and make the target unavailable to legitimate users.", "rationale": "This accurately describes the coordinated flooding of a target to cause service disruption.", "isCorrect": true },
+                    { "text": "Gaining unauthorized access to a computer system or network; aim is to steal data.", "rationale": "This describes hacking in general, not specifically DDoS.", "isCorrect": false },
+                    { "text": "Tricking individuals into performing actions or divulging confidential information; aim is to manipulate.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Describe the processes involved in, and the aim of carrying out, phishing.",
+                "hint": "Think about deceptive communications designed to trick recipients.",
+                "answerOptions": [
+                    { "text": "Encrypting a user's files and demanding a ransom; aim is financial gain.", "rationale": "This describes ransomware.", "isCorrect": false },
+                    { "text": "Sending fraudulent communications (e.g., emails, messages) that appear to be from a legitimate source, often to trick recipients into revealing sensitive information (like passwords or credit card details) or clicking on malicious links; aim is to steal personal information or credentials.", "rationale": "This accurately describes the deceptive nature and objective of phishing attacks.", "isCorrect": true },
+                    { "text": "Exploiting software vulnerabilities to gain control of a system; aim is to install backdoors.", "rationale": "This describes a type of hacking, not specifically phishing.", "isCorrect": false },
+                    { "text": "Monitoring a user's computer activity without their knowledge; aim is to collect data.", "rationale": "This describes spyware.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Explain how access levels are used to help keep data safe from security threats.",
+                "hint": "Consider how permissions can restrict who can do what with data.",
+                "answerOptions": [
+                    { "text": "Access levels encrypt all data on a system, making it unreadable to attackers.", "rationale": "Access levels control permissions, not encryption.", "isCorrect": false },
+                    { "text": "Access levels dictate what resources (e.g., files, folders, applications) a user or group is permitted to view, modify, or execute. This limits the damage an unauthorized individual or malicious software can cause by restricting their capabilities.", "rationale": "This correctly explains how access levels enforce authorization and limit potential harm.", "isCorrect": true },
+                    { "text": "Access levels automatically back up data to a remote server.", "rationale": "Backup is a separate security measure from access control.", "isCorrect": false },
+                    { "text": "Access levels detect and remove malware from a system.", "rationale": "Anti-malware software performs this function, not access levels.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Explain how firewalls are used to help keep data safe from security threats.",
+                "hint": "Think about a barrier that controls network traffic based on rules.",
+                "answerOptions": [
+                    { "text": "Firewalls encrypt all incoming and outgoing network traffic.", "rationale": "Firewalls control traffic; encryption is a separate process.", "isCorrect": false },
+                    { "text": "Firewalls are network security systems that monitor and control incoming and outgoing network traffic based on predetermined security rules. They act as a barrier between a trusted internal network and untrusted external networks (like the internet), preventing unauthorized access.", "rationale": "This accurately describes a firewall's role in filtering network traffic to enhance security.", "isCorrect": true },
+                    { "text": "Firewalls automatically create strong passwords for user accounts.", "rationale": "Password management is a separate security practice.", "isCorrect": false },
+                    { "text": "Firewalls physically block access to a computer's ports.", "rationale": "Firewalls block logical ports, not physical ones, and control traffic, not physical access.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Explain how Secure Socket Layer (SSL) security protocol is used to help keep data safe from security threats.",
+                "hint": "Consider its role in establishing secure, encrypted connections over the internet, especially for websites.",
+                "answerOptions": [
+                    { "text": "SSL blocks all unwanted pop-up advertisements on websites.", "rationale": "SSL is for secure communication, not ad blocking.", "isCorrect": false },
+                    { "text": "SSL is a cryptographic protocol designed to provide communication security over a computer network. It encrypts the data exchanged between a web server and a web browser, ensuring privacy and data integrity, and authenticating the server.", "rationale": "This correctly explains SSL's role in securing web communications through encryption and authentication.", "isCorrect": true },
+                    { "text": "SSL automatically updates software and operating systems to patch vulnerabilities.", "rationale": "Software updates are a separate security practice.", "isCorrect": false },
+                    { "text": "SSL is a type of antivirus software that detects and removes malware.", "rationale": "SSL is a communication protocol, not antivirus software.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Describe how sensors, microprocessors, and actuators can be used in collaboration to create automated systems.",
+                "hint": "Think about the flow of information: input, processing, and output in an automated process.",
+                "answerOptions": [
+                    { "text": "Sensors display information, microprocessors store data, and actuators provide power.", "rationale": "These are incorrect roles for the components in an automated system.", "isCorrect": false },
+                    { "text": "Sensors gather data from the environment (input), microprocessors process this data to make decisions, and actuators then perform physical actions based on those decisions (output), creating a closed-loop automated system.", "rationale": "This accurately describes the collaborative roles of these components in a typical automated system.", "isCorrect": true },
+                    { "text": "Sensors encrypt data, microprocessors decrypt data, and actuators transmit data.", "rationale": "These are roles related to data security and transmission, not the core function of automated systems.", "isCorrect": false },
+                    { "text": "Sensors write software, microprocessors debug software, and actuators install software.", "rationale": "These are software development tasks, not the roles of these hardware components.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Describe the advantages and disadvantages of an automated system used for a given scenario, such as a smart lighting system.",
+                "hint": "Consider benefits like efficiency and consistency versus drawbacks like initial cost and potential for failure.",
+                "answerOptions": [
+                    { "text": "Advantages: Requires more human intervention; Disadvantages: Lower initial cost.", "rationale": "Automated systems reduce human intervention and can have higher initial costs.", "isCorrect": false },
+                    { "text": "Advantages: Increased efficiency, consistency, and reduced human error; Disadvantages: High initial cost, potential for system failure, and lack of flexibility for unusual situations.", "rationale": "This accurately lists common advantages and disadvantages of automated systems.", "isCorrect": true },
+                    { "text": "Advantages: Always faster than manual systems; Disadvantages: Uses less energy.", "rationale": "Speed varies, and energy use depends on the system; it's not always less.", "isCorrect": false },
+                    { "text": "Advantages: Provides more jobs for humans; Disadvantages: Less reliable.", "rationale": "Automation can reduce manual jobs, and reliability is often a key advantage.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Understand what is meant by robotics.",
+                "hint": "Think about the field that involves designing and building machines that can perform tasks autonomously.",
+                "answerOptions": [
+                    { "text": "The study of human-computer interaction and user interface design.", "rationale": "This describes Human-Computer Interaction (HCI).", "isCorrect": false },
+                    { "text": "The branch of computer science that incorporates the design, construction, operation, and application of robots.", "rationale": "This accurately defines robotics as a multidisciplinary field focused on robots.", "isCorrect": true },
+                    { "text": "The development of software that can learn from data without explicit programming.", "rationale": "This describes machine learning, a subfield of AI.", "isCorrect": false },
+                    { "text": "The process of automating industrial manufacturing lines without using machines.", "rationale": "Robotics involves machines, and automation without machines is a contradiction.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Describe the characteristics of a robot.",
+                "hint": "Consider the physical and functional attributes that define a robot.",
+                "answerOptions": [
+                    { "text": "Must be human-like in appearance and capable of independent thought.", "rationale": "Robots don't have to be human-like or capable of independent thought (AI is a separate field).", "isCorrect": false },
+                    { "text": "A mechanical structure or framework; electrical components (sensors, microprocessors, actuators); and programmable.", "rationale": "These are the fundamental characteristics that allow a robot to perceive, process, and act.", "isCorrect": true },
+                    { "text": "Must be able to fly and communicate wirelessly.", "rationale": "These are specific capabilities, not universal characteristics of all robots.", "isCorrect": false },
+                    { "text": "Requires a constant internet connection and can only perform one task.", "rationale": "Many robots operate offline, and some can perform multiple tasks.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Understand the roles that robots can perform and describe the advantages and disadvantages of their use.",
+                "hint": "Think about where robots are used and the pros and cons of using them instead of humans.",
+                "answerOptions": [
+                    { "text": "Roles: Only for space exploration; Advantages: High cost; Disadvantages: Always safer than humans.", "rationale": "Robots have diverse roles, can be costly, and safety depends on context.", "isCorrect": false },
+                    { "text": "Roles: Performing repetitive tasks, hazardous work, precision manufacturing, assistance in homes/medicine; Advantages: Increased precision, consistency, speed, safety in dangerous environments; Disadvantages: High initial cost, job displacement, lack of adaptability to unforeseen circumstances, ethical concerns.", "rationale": "This comprehensively covers common robot roles and their associated benefits and drawbacks.", "isCorrect": true },
+                    { "text": "Roles: Writing creative stories; Advantages: Emotional intelligence; Disadvantages: Physical strength.", "rationale": "Robots are not known for creative writing or emotional intelligence, and physical strength can be an advantage.", "isCorrect": false },
+                    { "text": "Roles: Providing human companionship; Advantages: Unlimited creativity; Disadvantages: Requires constant human supervision.", "rationale": "Robots are not primarily for companionship, and creativity is limited; supervision varies.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Understand what is meant by artificial intelligence (AI).",
+                "hint": "Consider the goal of making machines exhibit human-like cognitive abilities.",
+                "answerOptions": [
+                    { "text": "The study of human-computer interaction and user interface design.", "rationale": "This describes Human-Computer Interaction (HCI).", "isCorrect": false },
+                    { "text": "The branch of computer science dealing with the simulation of intelligent behaviours by computers.", "rationale": "This accurately defines AI as the field focused on creating intelligent machines.", "isCorrect": true },
+                    { "text": "The process of building physical robots that can move and perform tasks.", "rationale": "This describes robotics, which can use AI but is not AI itself.", "isCorrect": false },
+                    { "text": "The design of computer networks and internet protocols.", "rationale": "This describes networking, not AI.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Describe the main characteristics of AI as the collection of data and the rules for using that data, the ability to reason, and it can include the ability to learn and adapt.",
+                "hint": "Think about how AI systems process information and develop over time.",
+                "answerOptions": [
+                    { "text": "AI systems are characterized by their ability to generate random numbers and perform simple arithmetic.", "rationale": "These are basic computational tasks, not defining characteristics of AI.", "isCorrect": false },
+                    { "text": "AI systems are characterized by their ability to collect and use data with defined rules, to reason, and often to learn and adapt from experience.", "rationale": "This accurately summarizes the key characteristics of AI, including data processing, logical inference, and learning capabilities.", "isCorrect": true },
+                    { "text": "AI systems are characterized by their physical appearance resembling humans and their ability to move independently.", "rationale": "These describe robots, not the core characteristics of AI.", "isCorrect": false },
+                    { "text": "AI systems are characterized by their need for constant human supervision and inability to make independent decisions.", "rationale": "The goal of AI is often to reduce supervision and enable independent decision-making.", "isCorrect": false }
+                ]
+            },
+            {
+                "question": "Explain the basic operation and components of AI systems to simulate intelligent behaviour, limited to expert systems and machine learning.",
+                "hint": "For expert systems, consider how knowledge and rules are used. For machine learning, think about how algorithms improve with data.",
+                "answerOptions": [
+                    { "text": "Expert systems use trial-and-error to find solutions; machine learning involves human programmers constantly updating rules.", "rationale": "Expert systems use rules, not trial-and-error; machine learning is about automatic adaptation.", "isCorrect": false },
+                    { "text": "Expert systems have a knowledge base, a rule base, an inference engine, and an interface to provide advice based on human expertise. Machine learning is when a program has the ability to automatically adapt its own processes and/or data based on patterns in data, without explicit programming.", "rationale": "This correctly explains the fundamental components and operation of both expert systems and machine learning.", "isCorrect": true },
+                    { "text": "Expert systems are physical robots that perform tasks; machine learning is a type of database management.", "rationale": "Expert systems are software, not robots; machine learning is about learning algorithms, not database management.", "isCorrect": false },
+                    { "text": "Expert systems generate random data; machine learning creates graphical user interfaces.", "rationale": "These are unrelated to the core functions of expert systems and machine learning.", "isCorrect": false }
+                ]
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let userAnswers = new Array(questions.length).fill(null); // Stores the index of the selected answer option for each question
+        let score = 0;
+
+        const quizSection = document.getElementById('quiz-section');
+        const resultsSection = document.getElementById('results-section');
+        const questionTextElement = document.getElementById('question-text');
+        const hintTextElement = document.getElementById('hint-text');
+        const answerOptionsContainer = document.getElementById('answer-options');
+        const prevButton = document.getElementById('prev-button');
+        const nextButton = document.getElementById('next-button');
+        const submitButton = document.getElementById('submit-button');
+        const currentQNumSpan = document.getElementById('current-q-num');
+        const totalQNumSpan = document.getElementById('total-q-num');
+        const progressBar = document.getElementById('progress-bar');
+        const scoreDisplay = document.getElementById('score-display');
+        const totalQuestionsDisplay = document.getElementById('total-questions-display');
+        const percentageDisplay = document.getElementById('percentage-display');
+        const reviewQuestionsContainer = document.getElementById('review-questions');
+        const restartButton = document.getElementById('restart-button');
+        const downloadPdfButton = document.getElementById('download-pdf-button'); // New button
+
+        // Set total questions display
+        totalQNumSpan.textContent = questions.length;
+        totalQuestionsDisplay.textContent = questions.length;
+
+        function loadQuestion() {
+            if (currentQuestionIndex < 0 || currentQuestionIndex >= questions.length) {
+                console.error("Invalid question index.");
+                return;
+            }
+
+            const question = questions[currentQuestionIndex];
+            questionTextElement.textContent = question.question;
+            hintTextElement.textContent = question.hint;
+            hintTextElement.classList.remove('hidden'); // Always show hint for this quiz
+
+            answerOptionsContainer.innerHTML = ''; // Clear previous options
+
+            // Shuffle answer options to prevent memorization by position
+            const shuffledOptions = [...question.answerOptions].sort(() => Math.random() - 0.5);
+
+            shuffledOptions.forEach((option, optionIndex) => {
+                const button = document.createElement('button');
+                button.textContent = option.text;
+                button.classList.add('answer-option', 'p-4', 'rounded-xl', 'text-left', 'font-medium', 'shadow-sm', 'hover:shadow-md', 'focus:outline-none');
+                button.dataset.optionIndex = question.answerOptions.indexOf(option); // Store original index to match with userAnswers
+                button.addEventListener('click', () => selectAnswer(question.answerOptions.indexOf(option)));
+
+                // Highlight if this option was previously selected by the user
+                if (userAnswers[currentQuestionIndex] === question.answerOptions.indexOf(option)) {
+                    button.classList.add('selected');
+                }
+                answerOptionsContainer.appendChild(button);
+            });
+
+            updateNavigationButtons();
+            updateProgressBar();
+            currentQNumSpan.textContent = currentQuestionIndex + 1;
+        }
+
+        function selectAnswer(selectedOptionIndex) {
+            userAnswers[currentQuestionIndex] = selectedOptionIndex;
+
+            // Update UI for selected option
+            Array.from(answerOptionsContainer.children).forEach(button => {
+                button.classList.remove('selected');
+                if (parseInt(button.dataset.optionIndex) === selectedOptionIndex) {
+                    button.classList.add('selected');
+                }
+            });
+        }
+
+        function updateNavigationButtons() {
+            prevButton.disabled = currentQuestionIndex === 0;
+            nextButton.disabled = currentQuestionIndex === questions.length - 1 && userAnswers[currentQuestionIndex] === null; // Can't go next if last and not answered
+
+            if (currentQuestionIndex === questions.length - 1) {
+                nextButton.classList.add('hidden');
+                submitButton.classList.remove('hidden');
+            } else {
+                nextButton.classList.remove('hidden');
+                submitButton.classList.add('hidden');
+            }
+        }
+
+        function updateProgressBar() {
+            const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+            progressBar.style.width = `${progress}%`;
+        }
+
+        function calculateScore() {
+            score = 0;
+            questions.forEach((question, index) => {
+                const userAnswerIndex = userAnswers[index];
+                if (userAnswerIndex !== null) {
+                    const selectedOption = question.answerOptions[userAnswerIndex];
+                    if (selectedOption && selectedOption.isCorrect) {
+                        score++;
+                    }
+                }
+            });
+        }
+
+        function showResults() {
+            calculateScore();
+            quizSection.classList.add('hidden');
+            resultsSection.classList.remove('hidden');
+
+            const percentage = (score / questions.length) * 100;
+            scoreDisplay.textContent = score;
+            percentageDisplay.textContent = percentage.toFixed(2); // Display with 2 decimal places
+
+            reviewQuestionsContainer.innerHTML = ''; // Clear previous review
+
+            questions.forEach((question, index) => {
+                const userAnswerIndex = userAnswers[index];
+                const reviewItem = document.createElement('div');
+                reviewItem.classList.add('bg-gray-50', 'p-4', 'rounded-lg', 'shadow-sm');
+
+                const questionP = document.createElement('p');
+                questionP.classList.add('font-semibold', 'text-gray-800', 'mb-2');
+                questionP.textContent = `Question ${index + 1}: ${question.question}`;
+                reviewItem.appendChild(questionP);
+
+                question.answerOptions.forEach((option, optionIdx) => {
+                    const optionP = document.createElement('p');
+                    let optionClasses = ['p-2', 'rounded-md', 'mb-1', 'text-sm'];
+
+                    if (option.isCorrect) {
+                        optionClasses.push('bg-green-100', 'text-green-800', 'font-medium');
+                        optionP.textContent = `Correct Answer: ${option.text}`;
+                    } else if (userAnswerIndex === optionIdx && !option.isCorrect) {
+                        optionClasses.push('bg-red-100', 'text-red-800', 'font-medium');
+                        optionP.textContent = `Your Answer: ${option.text}`;
+                    } else {
+                        optionClasses.push('text-gray-600');
+                        optionP.textContent = option.text;
+                    }
+                    optionP.classList.add(...optionClasses);
+                    reviewItem.appendChild(optionP);
+
+                    // Add rationale for all options in review
+                    const rationaleP = document.createElement('p');
+                    rationaleP.classList.add('rationale-text', 'text-gray-600', 'mt-1', 'ml-4');
+                    rationaleP.textContent = `Rationale: ${option.rationale}`;
+                    reviewItem.appendChild(rationaleP);
+                });
+                reviewQuestionsContainer.appendChild(reviewItem);
+            });
+        }
+
+        function restartQuiz() {
+            currentQuestionIndex = 0;
+            userAnswers.fill(null);
+            score = 0;
+            quizSection.classList.remove('hidden');
+            resultsSection.classList.add('hidden');
+            loadQuestion();
+        }
+
+        async function downloadQuizResultsPdf() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            let y = 10; // Initial Y position for text
+
+            // Add title and score
+            doc.setFontSize(18);
+            doc.text("Joy's IGCSE Computer Science Paper 1 Quiz Results", 10, y);
+            y += 10;
+            doc.setFontSize(12);
+            doc.text(`Score: ${score} out of ${questions.length} (${((score / questions.length) * 100).toFixed(2)}%)`, 10, y);
+            y += 20;
+
+            // Add review of questions
+            doc.setFontSize(10);
+            questions.forEach((question, index) => {
+                const userAnswerIndex = userAnswers[index];
+                let userSelectedText = "Not Answered";
+                let isCorrectAnswer = false;
+
+                if (userAnswerIndex !== null) {
+                    const selectedOption = question.answerOptions[userAnswerIndex];
+                    if (selectedOption) {
+                        userSelectedText = selectedOption.text;
+                        isCorrectAnswer = selectedOption.isCorrect;
+                    }
+                }
+
+                const correctAnswerOption = question.answerOptions.find(opt => opt.isCorrect);
+                const correctAnswerText = correctAnswerOption ? correctAnswerOption.text : "N/A";
+
+                // Check if content will fit on current page, if not, add new page
+                if (y + 50 > doc.internal.pageSize.height - 20) { // Estimate space needed for a question
+                    doc.addPage();
+                    y = 10; // Reset Y position for new page
+                }
+
+                doc.setFontSize(11);
+                doc.text(`Question ${index + 1}: ${question.question}`, 10, y);
+                y += 7;
+
+                doc.setFontSize(10);
+                doc.text(`Your Answer: ${userSelectedText} ${isCorrectAnswer ? '(Correct)' : '(Incorrect)'}`, 15, y);
+                y += 7;
+                doc.text(`Correct Answer: ${correctAnswerText}`, 15, y);
+                y += 7;
+
+                // Add rationales for all options
+                question.answerOptions.forEach(option => {
+                    doc.text(`Rationale for "${option.text}": ${option.rationale}`, 20, y);
+                    y += 6;
+                });
+
+                y += 10; // Space after each question
+            });
+
+            doc.save("Joy_Quiz_Results.pdf");
+        }
+
+        // Event Listeners
+        prevButton.addEventListener('click', () => {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                loadQuestion();
+            }
+        });
+
+        nextButton.addEventListener('click', () => {
+            if (currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                loadQuestion();
+            }
+        });
+
+        submitButton.addEventListener('click', showResults);
+        restartButton.addEventListener('click', restartQuiz);
+        downloadPdfButton.addEventListener('click', downloadQuizResultsPdf); // New event listener
+
+        // Initial load
+        document.addEventListener('DOMContentLoaded', loadQuestion);
+
+    </script>
+</body>
+</html>
